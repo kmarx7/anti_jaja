@@ -20,10 +20,11 @@ function App() {
     fire: 0.0,
     wind: 0.1
   });
-  const [timerDuration, setTimerDuration] = useState(15); // minutes (1 to 120)
+  const [timerDuration, setTimerDuration] = useState(60); // Reservation timer minutes (1 to 720)
   const [streak, setStreak] = useState(5);
   const [totalMinutes, setTotalMinutes] = useState(120);
   const [sleepSatisfaction, setSleepSatisfaction] = useState(null);
+  const [sleepMusicDuration, setSleepMusicDuration] = useState(30); // Default sleep music playback: 30 minutes
   
   // Settings Modal & Dashboard Logs
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -36,7 +37,6 @@ function App() {
   const [breathCyclesMax, setBreathCyclesMax] = useState(3); // breathing cycles count: 3, 4, 6, 8
   
   // Sleep Reservation Timer
-  const [reserveMinutes, setReserveMinutes] = useState(60); // default 60 minutes
   const [isReserveActive, setIsReserveActive] = useState(false);
   const [reserveSecondsLeft, setReserveSecondsLeft] = useState(0);
   const [showAutomationGuide, setShowAutomationGuide] = useState(false);
@@ -237,11 +237,13 @@ function App() {
     const storedMix = localStorage.getItem('sleep_rit_mix');
     const storedStretchDur = localStorage.getItem('sleep_rit_stretch_dur');
     const storedBreathCycles = localStorage.getItem('sleep_rit_breath_cycles');
+    const storedMusicDur = localStorage.getItem('sleep_rit_music_dur');
     
     if (storedStreak) setStreak(parseInt(storedStreak, 10));
     if (storedMinutes) setTotalMinutes(parseInt(storedMinutes, 10));
     if (storedStretchDur) setStretchDuration(parseInt(storedStretchDur, 10));
     if (storedBreathCycles) setBreathCyclesMax(parseInt(storedBreathCycles, 10));
+    if (storedMusicDur) setSleepMusicDuration(parseInt(storedMusicDur, 10));
     
     if (storedTodos) {
       try {
@@ -385,7 +387,7 @@ function App() {
       });
 
       // Start countdown
-      setSecondsRemaining(timerDuration * 60);
+      setSecondsRemaining(sleepMusicDuration * 60);
 
       countdownInterval = setInterval(() => {
         setSecondsRemaining((prev) => {
@@ -579,7 +581,7 @@ function App() {
     triggerHaptic([300, 100, 300]);
     // Save new statistics
     const newStreak = streak + 1;
-    const newTotalMinutes = totalMinutes + timerDuration;
+    const newTotalMinutes = totalMinutes + sleepMusicDuration;
     
     setStreak(newStreak);
     setTotalMinutes(newTotalMinutes);
@@ -590,7 +592,7 @@ function App() {
     const todayStr = new Date().toISOString().split('T')[0];
     const newLog = {
       date: todayStr,
-      duration: timerDuration,
+      duration: sleepMusicDuration,
       quality: 'good'
     };
 
@@ -733,212 +735,206 @@ function App() {
               </p>
             </div>
 
-            {/* Sleep Reservation Timer Card */}
-            <div className="glass-card timer-card" style={{ marginBottom: '16px', background: 'rgba(255, 159, 67, 0.05)', border: '1px solid rgba(255, 159, 67, 0.15)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <h2 style={{ margin: 0, fontSize: '15px', color: 'var(--accent)' }}>수면 예약 타이머 ⏰</h2>
+            {/* Sleep Reservation Timer Dial Card */}
+            {(() => {
+              // Calculate dial coordinates and offset based on active countdown
+              let cx = 90;
+              let cy = 15;
+              let strokeDashoffset = 0;
+              if (isReserveActive) {
+                const totalSecs = timerDuration * 60;
+                const pct = totalSecs > 0 ? (reserveSecondsLeft / totalSecs) : 0;
+                const angle = pct * 2 * Math.PI - Math.PI / 2;
+                cx = 90 + 75 * Math.cos(angle);
+                cy = 90 + 75 * Math.sin(angle);
+                strokeDashoffset = 471.24 * (1 - pct);
+              } else {
+                const pct = (timerDuration - 1) / 719;
+                const angle = pct * 2 * Math.PI - Math.PI / 2;
+                cx = 90 + 75 * Math.cos(angle);
+                cy = 90 + 75 * Math.sin(angle);
+                strokeDashoffset = 471.24 * (1 - pct);
+              }
+
+              return (
+                <div className="glass-card timer-card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <h2 style={{ margin: 0 }}>수면 예약 타이머 ⏰</h2>
+                    <button 
+                      type="button" 
+                      style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                      onClick={() => { triggerHaptic(50); setShowAutomationGuide(true); }}
+                    >
+                      기기 차단 가이드 ❓
+                    </button>
+                  </div>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px', textAlign: 'left', lineHeight: '1.4' }}>
+                    {isReserveActive 
+                      ? "예약 타이머가 작동 중입니다. 스마트폰을 계속 사용하더라도 시간 종료 시 수면 의식이 즉시 자동 시작됩니다."
+                      : "지금으로부터 몇 시간/분 후에 잠자리에 들지 설정하세요. 타이머가 종료되면 수면 의식이 자동으로 활성화됩니다."
+                    }
+                  </p>
+
+                  {/* Time Select Row for Hours and Minutes */}
+                  <div className="time-select-row" style={{ opacity: isReserveActive ? 0.3 : 1, pointerEvents: isReserveActive ? 'none' : 'auto', marginBottom: '16px' }}>
+                    <div className="time-select-group">
+                      <label>시간</label>
+                      <select 
+                        value={Math.floor(timerDuration / 60)} 
+                        onChange={(e) => {
+                          const h = parseInt(e.target.value, 10);
+                          const m = timerDuration % 60;
+                          const newDuration = h * 60 + m;
+                          setTimerDuration(newDuration === 0 ? 1 : newDuration);
+                          triggerHaptic(50);
+                        }}
+                      >
+                        {Array.from({ length: 13 }, (_, i) => (
+                          <option key={i} value={i}>{i}시간</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="time-select-group">
+                      <label>분</label>
+                      <select 
+                        value={timerDuration % 60} 
+                        onChange={(e) => {
+                          const h = Math.floor(timerDuration / 60);
+                          const m = parseInt(e.target.value, 10);
+                          const newDuration = h * 60 + m;
+                          setTimerDuration(newDuration === 0 ? 1 : newDuration);
+                          triggerHaptic(50);
+                        }}
+                      >
+                        {Array.from({ length: 60 }, (_, i) => (
+                          <option key={i} value={i}>{i}분</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div className="radial-dial-container">
+                    <div 
+                      ref={dialRef}
+                      className="dial-wrapper"
+                      onMouseDown={handleDialMouseDown}
+                      onTouchStart={handleDialTouchStart}
+                      style={{ pointerEvents: isReserveActive ? 'none' : 'auto' }}
+                    >
+                      <svg className="dial-svg" viewBox="0 0 180 180">
+                        <defs>
+                          <linearGradient id="dial-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="var(--accent)" />
+                            <stop offset="100%" stopColor="var(--accent-dim)" />
+                          </linearGradient>
+                        </defs>
+                        
+                        {/* Background Track */}
+                        <circle className="dial-bg" cx="90" cy="90" r="75" />
+                        
+                        {/* Active Progress Arc */}
+                        <circle 
+                          className="dial-progress" 
+                          cx="90" 
+                          cy="90" 
+                          r="75" 
+                          strokeDasharray="471.24"
+                          strokeDashoffset={strokeDashoffset}
+                        />
+                        
+                        {/* Rotating Handle */}
+                        <circle 
+                          className="dial-handle" 
+                          cx={cx} 
+                          cy={cy} 
+                          r="10" 
+                          style={{ fill: isReserveActive ? 'var(--accent-dim)' : 'var(--accent)' }}
+                        />
+                      </svg>
+                      
+                      {/* Center time reading */}
+                      <div className="dial-center-info">
+                        {isReserveActive ? (
+                          <>
+                            <span className="unit" style={{ fontSize: '10px', color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2px' }}>남은 시간</span>
+                            <span className="minutes" style={{ fontSize: '16px', fontWeight: '800', color: 'var(--accent)' }}>
+                              {formatReserveTime(reserveSecondsLeft)}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            {Math.floor(timerDuration / 60) > 0 ? (
+                              <>
+                                <span className="hours" style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent)' }}>
+                                  {Math.floor(timerDuration / 60)}시간
+                                </span>
+                                {timerDuration % 60 > 0 && (
+                                  <span className="minutes" style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', marginTop: '2px' }}>
+                                    {timerDuration % 60}분
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <span className="minutes">{timerDuration % 60}</span>
+                                <span className="unit">분</span>
+                              </>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick Presets */}
+                    <div className="presets-container" style={{ opacity: isReserveActive ? 0.3 : 1, pointerEvents: isReserveActive ? 'none' : 'auto' }}>
+                      {[15, 30, 45, 60].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          className={`preset-btn ${timerDuration === preset ? 'active' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTimerDuration(preset);
+                            triggerHaptic(50);
+                          }}
+                        >
+                          {preset}분
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {isReserveActive ? (
+              <button 
+                type="button"
+                className="btn-secondary" 
+                style={{ marginTop: '8px', border: '1px solid var(--accent)', color: 'var(--accent)' }}
+                onClick={handleCancelReservation}
+              >
+                수면 예약 취소 ✕
+              </button>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                 <button 
-                  type="button" 
-                  style={{ background: 'transparent', border: 'none', color: 'var(--accent-dim)', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
-                  onClick={() => { triggerHaptic(50); setShowAutomationGuide(true); }}
+                  type="button"
+                  className="btn-primary" 
+                  style={{ marginTop: '8px' }}
+                  onClick={() => handleStartReservation(timerDuration)}
                 >
-                  기기 차단 가이드 ❓
+                  수면 예약 시작하기 ⏰
+                </button>
+                <button
+                  type="button"
+                  style={{ background: 'transparent', border: 'none', color: 'var(--accent-dim)', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline', marginTop: '12px' }}
+                  onClick={() => handleStartReservation(0.1)} // 6 seconds test
+                >
+                  시뮬레이션 테스트 (6초 후 시작)
                 </button>
               </div>
-
-              {!isReserveActive ? (
-                <>
-                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', textAlign: 'left', lineHeight: '1.4' }}>
-                    설정한 시간 후에 자동으로 알림음과 진동이 울리며 수면 의식 화면이 강제로 실행됩니다.
-                  </p>
-                  
-                  {/* Preset Buttons for Sleep Reservation */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
-                    {[15, 30, 60].map(mins => (
-                      <button
-                        key={mins}
-                        type="button"
-                        className="preset-btn"
-                        style={{ padding: '8px 0', fontSize: '11px' }}
-                        onClick={() => handleStartReservation(mins)}
-                      >
-                        {mins >= 60 ? `${mins / 60}시간 후` : `${mins}분 후`}
-                      </button>
-                    ))}
-                    {[120, 180].map(mins => (
-                      <button
-                        key={mins}
-                        type="button"
-                        className="preset-btn"
-                        style={{ padding: '8px 0', fontSize: '11px' }}
-                        onClick={() => handleStartReservation(mins)}
-                      >
-                        {mins / 60}시간 후
-                      </button>
-                    ))}
-                    {/* Instant Test button */}
-                    <button
-                      type="button"
-                      className="preset-btn"
-                      style={{ padding: '8px 0', fontSize: '11px', borderColor: 'var(--accent)', color: 'var(--accent)' }}
-                      onClick={() => handleStartReservation(0.1)} // 6 seconds for testing
-                    >
-                      테스트 (6초)
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '8px 0' }}>
-                  <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent)', marginBottom: '4px' }}>
-                    {formatReserveTime(reserveSecondsLeft)} 후 시작
-                  </div>
-                  <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                    백그라운드 안내: 이 탭을 켜 두시거나 브라우저 푸시 알림 권한을 켜 두세요.
-                  </p>
-                  <button
-                    type="button"
-                    className="btn-secondary"
-                    style={{ padding: '6px 16px', fontSize: '12px', width: 'auto', margin: '0 auto' }}
-                    onClick={handleCancelReservation}
-                  >
-                    예약 취소
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Set Timer settings */}
-            <div className="glass-card timer-card">
-              <h2>수면 의식 시간 설정</h2>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                시간/분 다이얼을 드래그하거나 위 선택기 또는 아래 퀵 프리셋 버튼을 이용해 수면 시간을 설정하세요.
-              </p>
-
-              {/* Time Select Row for Hours and Minutes */}
-              <div className="time-select-row">
-                <div className="time-select-group">
-                  <label>시간</label>
-                  <select 
-                    value={Math.floor(timerDuration / 60)} 
-                    onChange={(e) => {
-                      const h = parseInt(e.target.value, 10);
-                      const m = timerDuration % 60;
-                      const newDuration = h * 60 + m;
-                      setTimerDuration(newDuration === 0 ? 1 : newDuration);
-                      triggerHaptic(50);
-                    }}
-                  >
-                    {Array.from({ length: 13 }, (_, i) => (
-                      <option key={i} value={i}>{i}시간</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="time-select-group">
-                  <label>분</label>
-                  <select 
-                    value={timerDuration % 60} 
-                    onChange={(e) => {
-                      const h = Math.floor(timerDuration / 60);
-                      const m = parseInt(e.target.value, 10);
-                      const newDuration = h * 60 + m;
-                      setTimerDuration(newDuration === 0 ? 1 : newDuration);
-                      triggerHaptic(50);
-                    }}
-                  >
-                    {Array.from({ length: 60 }, (_, i) => (
-                      <option key={i} value={i}>{i}분</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              
-              <div className="radial-dial-container">
-                <div 
-                  ref={dialRef}
-                  className="dial-wrapper"
-                  onMouseDown={handleDialMouseDown}
-                  onTouchStart={handleDialTouchStart}
-                >
-                  <svg className="dial-svg" viewBox="0 0 180 180">
-                    <defs>
-                      <linearGradient id="dial-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="var(--accent)" />
-                        <stop offset="100%" stopColor="var(--accent-dim)" />
-                      </linearGradient>
-                    </defs>
-                    
-                    {/* Background Track */}
-                    <circle className="dial-bg" cx="90" cy="90" r="75" />
-                    
-                    {/* Active Progress Arc */}
-                    <circle 
-                      className="dial-progress" 
-                      cx="90" 
-                      cy="90" 
-                      r="75" 
-                      strokeDasharray="471.24"
-                      strokeDashoffset={471.24 * (1 - (timerDuration - 1) / 719)}
-                    />
-                    
-                    {/* Rotating Handle */}
-                    <circle 
-                      className="dial-handle" 
-                      cx={90 + 75 * Math.cos(((timerDuration - 1) / 719) * 2 * Math.PI - Math.PI / 2)} 
-                      cy={90 + 75 * Math.sin(((timerDuration - 1) / 719) * 2 * Math.PI - Math.PI / 2)} 
-                      r="10" 
-                    />
-                  </svg>
-                  
-                  {/* Center time reading */}
-                  <div className="dial-center-info">
-                    {Math.floor(timerDuration / 60) > 0 ? (
-                      <>
-                        <span className="hours" style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent)' }}>
-                          {Math.floor(timerDuration / 60)}시간
-                        </span>
-                        {timerDuration % 60 > 0 && (
-                          <span className="minutes" style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', marginTop: '2px' }}>
-                            {timerDuration % 60}분
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <span className="minutes">{timerDuration % 60}</span>
-                        <span className="unit">분</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Quick Presets */}
-                <div className="presets-container">
-                  {[15, 30, 45, 60].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      className={`preset-btn ${timerDuration === preset ? 'active' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setTimerDuration(preset);
-                        triggerHaptic(50);
-                      }}
-                    >
-                      {preset}분
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <button 
-              type="button"
-              className="btn-primary" 
-              style={{ marginTop: '8px' }}
-              onClick={() => { triggerHaptic(100); setScreen('step3'); }}
-            >
-              수면 의식 시작하기 🌙
-            </button>
+            )}
           </div>
         )}
 
@@ -1435,7 +1431,7 @@ function App() {
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>스마트폰 오프 디톡스</div>
                 <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--accent)', marginTop: '2px' }}>
-                  +{timerDuration}분
+                  +{sleepMusicDuration}분
                 </div>
               </div>
             </div>
@@ -1552,6 +1548,34 @@ function App() {
                         의식 단계 상세 설정 ⚙️
                       </span>
                       
+                      {/* Sleep Music Playback Duration */}
+                      <div style={{ background: 'rgba(255,255,255,0.01)', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)', marginBottom: '12px', textAlign: 'left' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 'bold' }}>수면 음악 재생 시간 🎵</span>
+                          <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{sleepMusicDuration}분 재생</span>
+                        </div>
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                          블랙아웃 화면에서 수면 환경음이 자동으로 흘러나올 지속시간을 설정합니다.
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {[15, 30, 45, 60].map(mins => (
+                            <button
+                              key={mins}
+                              type="button"
+                              className={`preset-btn ${sleepMusicDuration === mins ? 'active' : ''}`}
+                              style={{ padding: '6px 0', fontSize: '12px' }}
+                              onClick={() => {
+                                setSleepMusicDuration(mins);
+                                localStorage.setItem('sleep_rit_music_dur', mins.toString());
+                                triggerHaptic(50);
+                              }}
+                            >
+                              {mins}분
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
                       {/* Stretching Pose Duration */}
                       <div style={{ background: 'rgba(255,255,255,0.01)', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)', marginBottom: '12px', textAlign: 'left' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
