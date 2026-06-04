@@ -86,10 +86,10 @@ function App() {
     let angle = Math.atan2(dy, dx) + Math.PI / 2;
     if (angle < 0) angle += 2 * Math.PI;
     
-    // Map angle to 1 - 120 minutes
+    // Map angle to 1 - 720 minutes (12 hours)
     const pct = angle / (2 * Math.PI);
-    const minutes = Math.round(pct * 119) + 1;
-    setTimerDuration(Math.max(1, Math.min(120, minutes)));
+    const minutes = Math.round(pct * 719) + 1;
+    setTimerDuration(Math.max(1, Math.min(720, minutes)));
   };
 
   const handleDialMouseDown = (e) => {
@@ -637,8 +637,46 @@ function App() {
             <div className="glass-card timer-card">
               <h2>수면 의식 시간 설정</h2>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                다이얼을 드래그하거나 퀵 타이머 버튼을 터치하여 수면 차단 시간을 설정하세요.
+                시간/분 다이얼을 드래그하거나 위 선택기 또는 아래 퀵 프리셋 버튼을 이용해 수면 시간을 설정하세요.
               </p>
+
+              {/* Time Select Row for Hours and Minutes */}
+              <div className="time-select-row">
+                <div className="time-select-group">
+                  <label>시간</label>
+                  <select 
+                    value={Math.floor(timerDuration / 60)} 
+                    onChange={(e) => {
+                      const h = parseInt(e.target.value, 10);
+                      const m = timerDuration % 60;
+                      const newDuration = h * 60 + m;
+                      setTimerDuration(newDuration === 0 ? 1 : newDuration);
+                      triggerHaptic(50);
+                    }}
+                  >
+                    {Array.from({ length: 13 }, (_, i) => (
+                      <option key={i} value={i}>{i}시간</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="time-select-group">
+                  <label>분</label>
+                  <select 
+                    value={timerDuration % 60} 
+                    onChange={(e) => {
+                      const h = Math.floor(timerDuration / 60);
+                      const m = parseInt(e.target.value, 10);
+                      const newDuration = h * 60 + m;
+                      setTimerDuration(newDuration === 0 ? 1 : newDuration);
+                      triggerHaptic(50);
+                    }}
+                  >
+                    {Array.from({ length: 60 }, (_, i) => (
+                      <option key={i} value={i}>{i}분</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               
               <div className="radial-dial-container">
                 <div 
@@ -665,22 +703,37 @@ function App() {
                       cy="90" 
                       r="75" 
                       strokeDasharray="471.24"
-                      strokeDashoffset={471.24 * (1 - (timerDuration - 1) / 119)}
+                      strokeDashoffset={471.24 * (1 - (timerDuration - 1) / 719)}
                     />
                     
                     {/* Rotating Handle */}
                     <circle 
                       className="dial-handle" 
-                      cx={90 + 75 * Math.cos(((timerDuration - 1) / 119) * 2 * Math.PI - Math.PI / 2)} 
-                      cy={90 + 75 * Math.sin(((timerDuration - 1) / 119) * 2 * Math.PI - Math.PI / 2)} 
+                      cx={90 + 75 * Math.cos(((timerDuration - 1) / 719) * 2 * Math.PI - Math.PI / 2)} 
+                      cy={90 + 75 * Math.sin(((timerDuration - 1) / 719) * 2 * Math.PI - Math.PI / 2)} 
                       r="10" 
                     />
                   </svg>
                   
                   {/* Center time reading */}
                   <div className="dial-center-info">
-                    <span className="minutes">{timerDuration}</span>
-                    <span className="unit">분</span>
+                    {Math.floor(timerDuration / 60) > 0 ? (
+                      <>
+                        <span className="hours" style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent)' }}>
+                          {Math.floor(timerDuration / 60)}시간
+                        </span>
+                        {timerDuration % 60 > 0 && (
+                          <span className="minutes" style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', marginTop: '2px' }}>
+                            {timerDuration % 60}분
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <span className="minutes">{timerDuration % 60}</span>
+                        <span className="unit">분</span>
+                      </>
+                    )}
                   </div>
                 </div>
 

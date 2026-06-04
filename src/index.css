@@ -1208,3 +1208,56 @@ p {
   background: rgba(255, 159, 67, 0.2);
   border-radius: 2px;
 }
+
+/* Time Selector Dropdowns (Hour and Minute) */
+.time-select-row {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.time-select-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.time-select-group label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.time-select-group select {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-main);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
+  text-align-last: center;
+}
+
+.time-select-group select:focus {
+  border-color: var(--accent);
+  background: rgba(255, 159, 67, 0.05);
+}
+
+.time-select-group select option {
+  background-color: var(--bg-secondary);
+  color: var(--text-main);
+}
