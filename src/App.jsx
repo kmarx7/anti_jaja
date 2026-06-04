@@ -850,14 +850,21 @@ function App() {
                           strokeDashoffset={strokeDashoffset}
                         />
                         
-                        {/* Rotating Handle */}
-                        <circle 
-                          className="dial-handle" 
-                          cx={cx} 
-                          cy={cy} 
-                          r="10" 
-                          style={{ fill: isReserveActive ? 'var(--accent-dim)' : 'var(--accent)' }}
-                        />
+                        {/* Rotating Handle (Cat Emoji) */}
+                        <text
+                          x={cx}
+                          y={cy + 2} // Slight baseline adjustment for vertical alignment
+                          textAnchor="middle"
+                          dominantBaseline="central"
+                          style={{ 
+                            fontSize: '18px', 
+                            userSelect: 'none', 
+                            cursor: isReserveActive ? 'default' : 'grab',
+                            filter: 'drop-shadow(0 0 3px rgba(255, 159, 67, 0.4))'
+                          }}
+                        >
+                          {isReserveActive ? '🐈' : '🐱'}
+                        </text>
                       </svg>
                       
                       {/* Center time reading */}
