@@ -45,6 +45,13 @@ function App() {
   const [newTodo, setNewTodo] = useState('');
   const [isSavingTodos, setIsSavingTodos] = useState(false);
 
+  // Ritual Step 2.5: AI Chatbot Coach
+  const [chatMessages, setChatMessages] = useState([
+    { sender: 'coach', text: '안녕하세요. 슬립릿 수면 코치입니다. 🕯️ 오늘 밤 잠들기 전 마음을 무겁게 하는 생각이나 고민이 있다면 편하게 적어주세요.' }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [isCoachTyping, setIsCoachTyping] = useState(false);
+
   // Ritual Step 1.5: Offline Stretching Guide
   const [stretchIndex, setStretchIndex] = useState(0);
   const [stretchSecondsLeft, setStretchSecondsLeft] = useState(15);
@@ -366,6 +373,70 @@ function App() {
 
   // Action: Finish breathing
   const handleNextFromStep2 = () => {
+    triggerHaptic(100);
+    setScreen('coach-bot');
+  };
+
+  const handleSendChatMessage = () => {
+    if (!chatInput.trim()) return;
+    triggerHaptic(50);
+    
+    const userMsg = { sender: 'user', text: chatInput.trim() };
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatInput('');
+    setIsCoachTyping(true);
+
+    // Simulate thinking delay
+    setTimeout(() => {
+      setIsCoachTyping(false);
+      const coachResponse = getCoachResponse(userMsg.text);
+      setChatMessages(prev => [...prev, { sender: 'coach', text: coachResponse }]);
+      triggerHaptic(80);
+    }, 1200);
+  };
+
+  const getCoachResponse = (userInput) => {
+    const text = userInput.toLowerCase();
+    const responses = {
+      stress: [
+        "오늘 정말 무거운 마음을 안고 애쓰셨군요. 그 무거운 스트레스는 침대 밖 테이블에 놓아둔 폰처럼 잠시 격리해 둘까요? 🕯️",
+        "많이 복잡하고 답답하셨겠어요. 지금 이 공간만큼은 아무것도 책임지지 않고 그냥 쉬어가셔도 괜찮습니다. 편히 숨을 내쉬어 보세요. ✨"
+      ],
+      work: [
+        "오늘 일은 여기까지입니다. 머릿속의 퇴근 버튼을 누르듯 마음의 업무도 완전히 종료해 볼게요. 내일 아침의 나를 위해 지금은 눈을 감아봐요. 🛌",
+        "밀려드는 일 생각에 뇌가 아직 깨어있군요. 오늘은 더 고민해도 결론이 나지 않는 시간입니다. 이제 푹 쉴 자격이 충분합니다."
+      ],
+      anxious: [
+        "불안하고 걱정스러운 마음이 드는 것은 자연스러운 일입니다. 걱정 마세요, 이 방은 지금 아주 안전하고 아늑하니까요. 🌙",
+        "생각이 꼬리를 무는군요. 들리는 음악 소리에만 가만히 귀 기울여 보세요. 그 수많은 생각들이 흐르는 물에 띄워 보내듯 흘러갈 거예요."
+      ],
+      sad: [
+        "오늘 속상하고 아픈 일이 있으셨나 봅니다. 털어내려 억지로 애쓰지 말고, 포근한 이불 속에 마음을 편안히 기대어 보세요. ❤️",
+        "지친 당신의 하루에 위로를 보냅니다. 괜찮아요, 잠은 몸과 영혼을 자연스럽게 치유하는 놀라운 힘이 있습니다. 편히 누워 보세요."
+      ],
+      general: [
+        "마음속 생각을 솔직하게 고백해 주셔서 기쁩니다. 당신이 나열한 짐들은 제가 여기 고스란히 맡아둘 테니 안심하고 숙면하러 가볼까요? ✨",
+        "따뜻하게 경청하고 있습니다. 오늘 일어난 일들은 이미 다 지나갔습니다. 당신에겐 지금 깊은 잠을 잘 온전한 권리가 있습니다. 🕯️",
+        "충분히 잘해냈습니다. 긴장된 머릿속을 비우고, 들려오는 수면 믹서 멜로디에 몸을 맡겨 보세요. 잘 자요. 🌙"
+      ]
+    };
+
+    if (text.includes('스트레스') || text.includes('짜증') || text.includes('화') || text.includes('힘들')) {
+      return responses.stress[Math.floor(Math.random() * responses.stress.length)];
+    }
+    if (text.includes('일') || text.includes('회사') || text.includes('공부') || text.includes('업무') || text.includes('시험')) {
+      return responses.work[Math.floor(Math.random() * responses.work.length)];
+    }
+    if (text.includes('걱정') || text.includes('불안') || text.includes('무서') || text.includes('생각')) {
+      return responses.anxious[Math.floor(Math.random() * responses.anxious.length)];
+    }
+    if (text.includes('슬픔') || text.includes('우울') || text.includes('속상') || text.includes('아프')) {
+      return responses.sad[Math.floor(Math.random() * responses.sad.length)];
+    }
+    return responses.general[Math.floor(Math.random() * responses.general.length)];
+  };
+
+  const handleFinishChat = () => {
     triggerHaptic(100);
     setScreen('step3');
   };
@@ -1006,6 +1077,71 @@ function App() {
               style={{ marginTop: '20px' }}
             >
               {breathPhase === 'done' ? '호흡 완료 (다음 단계)' : '건너뛰고 다음 단계'}
+            </button>
+          </div>
+        )}
+
+        {/* STEP 2.5: AI SLEEP COACH CHATBOT */}
+        {screen === 'coach-bot' && (
+          <div className="fade-enter-active" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+            <button className="exit-ritual" onClick={() => setScreen('dashboard')}>✕</button>
+
+            <div>
+              <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
+                의식 2.5단계
+              </div>
+              <h2 style={{ fontSize: '24px' }}>AI 수면 코치와 생각 비우기</h2>
+              <p style={{ marginTop: '8px', fontSize: '13px' }}>
+                머릿속을 떠돌며 수면을 방해하는 오늘 하루의 잡념과 스트레스를 코치에게 털어놓아 마음의 무게를 줄여보세요.
+              </p>
+            </div>
+
+            {/* Chat conversation area */}
+            <div className="chat-container">
+              <div className="chat-bubble-scroll" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
+                {chatMessages.map((msg, idx) => (
+                  <div key={idx} className={`chat-bubble ${msg.sender}`}>
+                    {msg.text}
+                  </div>
+                ))}
+                {isCoachTyping && (
+                  <div className="chat-typing-indicator">
+                    <div className="typing-dot" />
+                    <div className="typing-dot" />
+                    <div className="typing-dot" />
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Input */}
+              <div className="todo-input-container" style={{ marginBottom: 0 }}>
+                <input 
+                  type="text"
+                  className="todo-input"
+                  placeholder="코치에게 고민이나 오늘 일을 적어보세요..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSendChatMessage(); }}
+                  disabled={isCoachTyping}
+                />
+                <button 
+                  type="button"
+                  className="todo-add-btn"
+                  onClick={handleSendChatMessage}
+                  disabled={isCoachTyping}
+                >
+                  보내기
+                </button>
+              </div>
+            </div>
+
+            <button 
+              type="button"
+              className="btn-primary"
+              onClick={handleFinishChat}
+              disabled={isCoachTyping}
+            >
+              대화 마치고 내일 계획하기
             </button>
           </div>
         )}
