@@ -20,6 +20,11 @@ function App() {
   const [totalMinutes, setTotalMinutes] = useState(120);
   const [sleepSatisfaction, setSleepSatisfaction] = useState(null);
   
+  // Dashboard Tabs & Logs
+  const [dashboardTab, setDashboardTab] = useState('settings'); // 'settings' | 'analytics'
+  const [sleepLogs, setSleepLogs] = useState([]);
+  const [selectedLogDetail, setSelectedLogDetail] = useState(null);
+  
   // Ritual Step 1: Device Charge
   const [isChargerConnected, setIsChargerConnected] = useState(false);
   const [orientationSimulation, setOrientationSimulation] = useState(false); // Simulate face down for testing
@@ -114,8 +119,11 @@ function App() {
     const storedStreak = localStorage.getItem('sleep_rit_streak');
     const storedMinutes = localStorage.getItem('sleep_rit_minutes');
     const storedTodos = localStorage.getItem('sleep_rit_todos');
+    const storedLogs = localStorage.getItem('sleep_rit_logs');
+    
     if (storedStreak) setStreak(parseInt(storedStreak, 10));
     if (storedMinutes) setTotalMinutes(parseInt(storedMinutes, 10));
+    
     if (storedTodos) {
       try {
         setTodos(JSON.parse(storedTodos));
@@ -130,6 +138,31 @@ function App() {
         { id: 1, text: '이불 정리하기 🛌', completed: false },
         { id: 2, text: '따뜻한 물 한 잔 마시기 💧', completed: false }
       ]);
+    }
+
+    if (storedLogs) {
+      try {
+        setSleepLogs(JSON.parse(storedLogs));
+      } catch (e) {
+        setSleepLogs([]);
+      }
+    } else {
+      // Mock logs for onboarding visual demo
+      const mockLogs = [];
+      const today = new Date();
+      for (let i = 20; i > 0; i--) {
+        if (Math.random() > 0.3) {
+          const d = new Date();
+          d.setDate(today.getDate() - i);
+          mockLogs.push({
+            date: d.toISOString().split('T')[0],
+            duration: [15, 30, 45, 60, 90][Math.floor(Math.random() * 5)],
+            quality: ['good', 'meh', 'bad'][Math.floor(Math.random() * 3)]
+          });
+        }
+      }
+      setSleepLogs(mockLogs);
+      localStorage.setItem('sleep_rit_logs', JSON.stringify(mockLogs));
     }
   }, []);
 
@@ -323,6 +356,19 @@ function App() {
     localStorage.setItem('sleep_rit_streak', newStreak.toString());
     localStorage.setItem('sleep_rit_minutes', newTotalMinutes.toString());
     
+    // Log current session
+    const todayStr = new Date().toISOString().split('T')[0];
+    const newLog = {
+      date: todayStr,
+      duration: timerDuration,
+      quality: sleepSatisfaction || 'good'
+    };
+
+    let updatedLogs = sleepLogs.filter(l => l.date !== todayStr);
+    updatedLogs.push(newLog);
+    setSleepLogs(updatedLogs);
+    localStorage.setItem('sleep_rit_logs', JSON.stringify(updatedLogs));
+
     setScreen('morning');
   };
 
@@ -413,136 +459,275 @@ function App() {
               </div>
             </div>
 
-            {/* Step 0.1: Sleep satisfaction check-in */}
-            <div className="glass-card">
-              <h2>오늘 아침 컨디션은 어땠나요?</h2>
-              <p style={{ marginBottom: '12px' }}>매일 아침 수면 평가를 기록해 습관을 교정하세요.</p>
-              <div className="sleep-feedback">
-                <span 
-                  className={`feedback-emoji ${sleepSatisfaction === 'bad' ? 'selected' : ''}`}
-                  onClick={() => setSleepSatisfaction('bad')}
-                  title="피곤함"
-                >
-                  😊
-                </span>
-                <span 
-                  className={`feedback-emoji ${sleepSatisfaction === 'meh' ? 'selected' : ''}`}
-                  onClick={() => setSleepSatisfaction('meh')}
-                  title="보통"
-                >
-                  😐
-                </span>
-                <span 
-                  className={`feedback-emoji ${sleepSatisfaction === 'good' ? 'selected' : ''}`}
-                  onClick={() => setSleepSatisfaction('good')}
-                  title="개운함"
-                >
-                  😴
-                </span>
-              </div>
+            {/* Dashboard Navigation Tabs */}
+            <div className="dashboard-tabs">
+              <button 
+                type="button" 
+                className={`tab-btn ${dashboardTab === 'settings' ? 'active' : ''}`}
+                onClick={() => setDashboardTab('settings')}
+              >
+                수면 설정
+              </button>
+              <button 
+                type="button" 
+                className={`tab-btn ${dashboardTab === 'analytics' ? 'active' : ''}`}
+                onClick={() => setDashboardTab('analytics')}
+              >
+                수면 기록 (통계)
+              </button>
             </div>
 
-            {/* Set Audio & Timer settings */}
-            <div className="glass-card">
-              <h2>수면 의식 설정</h2>
-              
-              <div className="radial-dial-container">
-                <div 
-                  ref={dialRef}
-                  className="dial-wrapper"
-                  onMouseDown={handleDialMouseDown}
-                  onTouchStart={handleDialTouchStart}
-                >
-                  <svg className="dial-svg" viewBox="0 0 180 180">
-                    <defs>
-                      <linearGradient id="dial-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="var(--accent)" />
-                        <stop offset="100%" stopColor="var(--accent-dim)" />
-                      </linearGradient>
-                    </defs>
-                    
-                    {/* Background Track */}
-                    <circle className="dial-bg" cx="90" cy="90" r="75" />
-                    
-                    {/* Active Progress Arc */}
-                    <circle 
-                      className="dial-progress" 
-                      cx="90" 
-                      cy="90" 
-                      r="75" 
-                      strokeDasharray="471.24"
-                      strokeDashoffset={471.24 * (1 - (timerDuration - 1) / 119)}
-                    />
-                    
-                    {/* Rotating Handle */}
-                    <circle 
-                      className="dial-handle" 
-                      cx={90 + 75 * Math.cos(((timerDuration - 1) / 119) * 2 * Math.PI - Math.PI / 2)} 
-                      cy={90 + 75 * Math.sin(((timerDuration - 1) / 119) * 2 * Math.PI - Math.PI / 2)} 
-                      r="10" 
-                    />
-                  </svg>
-                  
-                  {/* Center time reading */}
-                  <div className="dial-center-info">
-                    <span className="minutes">{timerDuration}</span>
-                    <span className="unit">분</span>
-                  </div>
-                </div>
-
-                {/* Quick Presets */}
-                <div className="presets-container">
-                  {[15, 30, 60, 90].map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      className={`preset-btn ${timerDuration === preset ? 'active' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setTimerDuration(preset);
-                        triggerHaptic(50);
-                      }}
+            {dashboardTab === 'settings' ? (
+              <>
+                {/* Step 0.1: Sleep satisfaction check-in */}
+                <div className="glass-card">
+                  <h2>오늘 아침 컨디션은 어땠나요?</h2>
+                  <p style={{ marginBottom: '12px' }}>매일 아침 수면 평가를 기록해 습관을 교정하세요.</p>
+                  <div className="sleep-feedback">
+                    <span 
+                      className={`feedback-emoji ${sleepSatisfaction === 'bad' ? 'selected' : ''}`}
+                      onClick={() => setSleepSatisfaction('bad')}
+                      title="피곤함"
                     >
-                      {preset}분
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ marginTop: '20px' }}>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', textAlign: 'left', marginBottom: '6px' }}>
-                  수면 사운드 유형
-                </span>
-                <div className="sound-selector">
-                  <div 
-                    className={`sound-pill ${soundType === 'binaural' ? 'active' : ''}`}
-                    onClick={() => setSoundType('binaural')}
-                  >
-                    델타 바이노럴
-                  </div>
-                  <div 
-                    className={`sound-pill ${soundType === 'ambient' ? 'active' : ''}`}
-                    onClick={() => setSoundType('ambient')}
-                  >
-                    명상 패드
-                  </div>
-                  <div 
-                    className={`sound-pill ${soundType === 'rain' ? 'active' : ''}`}
-                    onClick={() => setSoundType('rain')}
-                  >
-                    자연의 비
+                      😊
+                    </span>
+                    <span 
+                      className={`feedback-emoji ${sleepSatisfaction === 'meh' ? 'selected' : ''}`}
+                      onClick={() => setSleepSatisfaction('meh')}
+                      title="보통"
+                    >
+                      😐
+                    </span>
+                    <span 
+                      className={`feedback-emoji ${sleepSatisfaction === 'good' ? 'selected' : ''}`}
+                      onClick={() => setSleepSatisfaction('good')}
+                      title="개운함"
+                    >
+                      😴
+                    </span>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <button 
-              className="btn-primary" 
-              style={{ marginTop: '16px' }}
-              onClick={() => setScreen('step1')}
-            >
-              수면 의식 시작하기 🌙
-            </button>
+                {/* Set Audio & Timer settings */}
+                <div className="glass-card">
+                  <h2>수면 의식 설정</h2>
+                  
+                  <div className="radial-dial-container">
+                    <div 
+                      ref={dialRef}
+                      className="dial-wrapper"
+                      onMouseDown={handleDialMouseDown}
+                      onTouchStart={handleDialTouchStart}
+                    >
+                      <svg className="dial-svg" viewBox="0 0 180 180">
+                        <defs>
+                          <linearGradient id="dial-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="var(--accent)" />
+                            <stop offset="100%" stopColor="var(--accent-dim)" />
+                          </linearGradient>
+                        </defs>
+                        
+                        {/* Background Track */}
+                        <circle className="dial-bg" cx="90" cy="90" r="75" />
+                        
+                        {/* Active Progress Arc */}
+                        <circle 
+                          className="dial-progress" 
+                          cx="90" 
+                          cy="90" 
+                          r="75" 
+                          strokeDasharray="471.24"
+                          strokeDashoffset={471.24 * (1 - (timerDuration - 1) / 119)}
+                        />
+                        
+                        {/* Rotating Handle */}
+                        <circle 
+                          className="dial-handle" 
+                          cx={90 + 75 * Math.cos(((timerDuration - 1) / 119) * 2 * Math.PI - Math.PI / 2)} 
+                          cy={90 + 75 * Math.sin(((timerDuration - 1) / 119) * 2 * Math.PI - Math.PI / 2)} 
+                          r="10" 
+                        />
+                      </svg>
+                      
+                      {/* Center time reading */}
+                      <div className="dial-center-info">
+                        <span className="minutes">{timerDuration}</span>
+                        <span className="unit">분</span>
+                      </div>
+                    </div>
+
+                    {/* Quick Presets */}
+                    <div className="presets-container">
+                      {[15, 30, 60, 90].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          className={`preset-btn ${timerDuration === preset ? 'active' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTimerDuration(preset);
+                            triggerHaptic(50);
+                          }}
+                        >
+                          {preset}분
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '20px' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', textAlign: 'left', marginBottom: '6px' }}>
+                      수면 사운드 유형
+                    </span>
+                    <div className="sound-selector">
+                      <div 
+                        className={`sound-pill ${soundType === 'binaural' ? 'active' : ''}`}
+                        onClick={() => setSoundType('binaural')}
+                      >
+                        델타 바이노럴
+                      </div>
+                      <div 
+                        className={`sound-pill ${soundType === 'ambient' ? 'active' : ''}`}
+                        onClick={() => setSoundType('ambient')}
+                      >
+                        명상 패드
+                      </div>
+                      <div 
+                        className={`sound-pill ${soundType === 'rain' ? 'active' : ''}`}
+                        onClick={() => setSoundType('rain')}
+                      >
+                        자연의 비
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  className="btn-primary" 
+                  style={{ marginTop: '16px' }}
+                  onClick={() => setScreen('step1')}
+                >
+                  수면 의식 시작하기 🌙
+                </button>
+              </>
+            ) : (
+              <>
+                {/* 수면 분석 탭 컨텐츠 */}
+                <div className="glass-card" style={{ padding: '20px', textAlign: 'left' }}>
+                  <h2>수면 리추얼 통계</h2>
+                  <p style={{ marginBottom: '16px' }}>최근 28일 동안 스마트폰을 끄고 완수한 수면 의식 기록입니다.</p>
+                  
+                  <div className="heatmap-container">
+                    <div className="heatmap-labels">
+                      <span>28일 전</span>
+                      <span>오늘</span>
+                    </div>
+
+                    {/* 4x7 Heatmap Grid */}
+                    <div className="heatmap-grid">
+                      {(() => {
+                        const days = [];
+                        const today = new Date();
+                        for (let i = 27; i >= 0; i--) {
+                          const d = new Date();
+                          d.setDate(today.getDate() - i);
+                          days.push(d.toISOString().split('T')[0]);
+                        }
+                        return days.map(dateStr => {
+                          const log = sleepLogs.find(l => l.date === dateStr);
+                          const isSelected = selectedLogDetail && selectedLogDetail.date === dateStr;
+                          const cellColor = log ? (
+                            log.duration <= 15 ? 'rgba(255, 159, 67, 0.25)' :
+                            log.duration <= 30 ? 'rgba(255, 159, 67, 0.55)' :
+                            log.duration <= 60 ? 'rgba(255, 159, 67, 0.75)' :
+                            'rgba(255, 159, 67, 0.95)'
+                          ) : 'rgba(255, 255, 255, 0.03)';
+
+                          return (
+                            <div 
+                              key={dateStr}
+                              className={`heatmap-cell ${isSelected ? 'selected' : ''}`}
+                              style={{ backgroundColor: cellColor }}
+                              onClick={() => {
+                                triggerHaptic(30);
+                                if (log) {
+                                  setSelectedLogDetail(log);
+                                } else {
+                                  setSelectedLogDetail({ date: dateStr, duration: 0, quality: 'none' });
+                                }
+                              }}
+                              title={dateStr}
+                            />
+                          );
+                        });
+                      })()}
+                    </div>
+
+                    {/* Heatmap Legend */}
+                    <div className="heatmap-legend">
+                      <span>미달성</span>
+                      <div className="legend-box" style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255,159,67,0.05)' }} />
+                      <div className="legend-box" style={{ backgroundColor: 'rgba(255, 159, 67, 0.25)' }} />
+                      <div className="legend-box" style={{ backgroundColor: 'rgba(255, 159, 67, 0.55)' }} />
+                      <div className="legend-box" style={{ backgroundColor: 'rgba(255, 159, 67, 0.75)' }} />
+                      <div className="legend-box" style={{ backgroundColor: 'rgba(255, 159, 67, 0.95)' }} />
+                      <span>1시간+</span>
+                    </div>
+                  </div>
+
+                  {/* Selected cell details */}
+                  {selectedLogDetail ? (
+                    <div className="log-detail-box">
+                      <div style={{ fontWeight: 'bold', color: 'var(--accent)', marginBottom: '4px' }}>
+                        {selectedLogDetail.date} 기록
+                      </div>
+                      {selectedLogDetail.duration > 0 ? (
+                        <div>
+                          • 수면 음악 재생 시간: <strong>{selectedLogDetail.duration}분</strong><br />
+                          • 아침 컨디션 상태: <strong>
+                            {selectedLogDetail.quality === 'good' && '좋음 (개운함) 😴'}
+                            {selectedLogDetail.quality === 'meh' && '보통 😐'}
+                            {selectedLogDetail.quality === 'bad' && '피곤함 😊'}
+                          </strong>
+                        </div>
+                      ) : (
+                        <div style={{ color: 'var(--text-muted)' }}>스마트폰 디톡스 의식을 진행하지 않은 날입니다.</div>
+                      )}
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: '11px', textAlign: 'center', color: 'var(--text-muted)', marginTop: '8px' }}>
+                      원형 타일을 클릭하면 일별 상세 수면 기록을 확인할 수 있습니다.
+                    </p>
+                  )}
+                </div>
+
+                <div className="glass-card" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ fontSize: '14px', margin: 0 }}>데이터 관리</h3>
+                    <p style={{ fontSize: '11px', margin: '2px 0 0 0' }}>로컬 데이터 초기화하기</p>
+                  </div>
+                  <button 
+                    type="button"
+                    className="btn-secondary"
+                    style={{ width: 'auto', padding: '6px 12px', fontSize: '12px', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444' }}
+                    onClick={() => {
+                      if (window.confirm("그동안의 수면 기록을 모두 삭제하고 초기화하시겠습니까?")) {
+                        localStorage.removeItem('sleep_rit_logs');
+                        localStorage.removeItem('sleep_rit_streak');
+                        localStorage.removeItem('sleep_rit_minutes');
+                        setStreak(0);
+                        setTotalMinutes(0);
+                        setSleepLogs([]);
+                        setSelectedLogDetail(null);
+                        triggerHaptic([100, 50, 100]);
+                      }
+                    }}
+                  >
+                    데이터 초기화
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
