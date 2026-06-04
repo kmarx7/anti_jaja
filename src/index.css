@@ -237,47 +237,122 @@ p {
   box-shadow: 0 0 10px rgba(255, 159, 67, 0.1);
 }
 
-/* Time Slider Custom Styles */
-.slider-container {
-  margin-top: 12px;
+/* Radial Dial Styles */
+.radial-dial-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 16px 0;
+  position: relative;
 }
 
-.slider-label {
+.dial-wrapper {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+}
+
+.dial-svg {
+  transform: rotate(-90deg); /* 12 o'clock start position */
+  width: 100%;
+  height: 100%;
+}
+
+.dial-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 8px;
+}
+
+.dial-progress {
+  fill: none;
+  stroke: url(#dial-gradient);
+  stroke-width: 8px;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.1s ease;
+}
+
+.dial-handle {
+  fill: var(--accent);
+  stroke: #070913;
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 6px var(--accent));
+  cursor: grab;
+  transition: cx 0.1s ease, cy 0.1s ease;
+}
+
+.dial-handle:active {
+  cursor: grabbing;
+  transform: scale(1.1);
+}
+
+.dial-center-info {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.dial-center-info .minutes {
+  font-size: 38px;
+  font-weight: 800;
+  color: var(--accent);
+  text-shadow: 0 0 15px rgba(255, 159, 67, 0.4);
+  line-height: 1;
+}
+
+.dial-center-info .unit {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Presets Container */
+.presets-container {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-
-.slider-label span.value {
-  color: var(--accent);
-  font-weight: bold;
-}
-
-input[type="range"] {
-  -webkit-appearance: none;
   width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  outline: none;
+  gap: 8px;
+  margin-top: 16px;
 }
 
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--accent);
+.preset-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
   cursor: pointer;
-  box-shadow: 0 0 8px var(--accent);
-  transition: transform 0.1s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  box-sizing: border-box;
 }
 
-input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+.preset-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 159, 67, 0.25);
+  color: var(--text-main);
 }
+
+.preset-btn.active {
+  background: rgba(255, 159, 67, 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 10px rgba(255, 159, 67, 0.1);
+}
+
 
 /* 4-7-8 Breathing Screen Animations */
 .breathing-circle-outer {

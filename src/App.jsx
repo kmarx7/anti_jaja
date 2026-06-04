@@ -15,7 +15,7 @@ function App() {
   // Navigation & States
   const [screen, setScreen] = useState('dashboard'); // 'dashboard' | 'step1' | 'step2' | 'step3' | 'blackout' | 'morning'
   const [soundType, setSoundType] = useState('binaural'); // 'binaural' | 'ambient' | 'rain'
-  const [timerDuration, setTimerDuration] = useState(2); // minutes (1 to 5)
+  const [timerDuration, setTimerDuration] = useState(15); // minutes (1 to 120)
   const [streak, setStreak] = useState(5);
   const [totalMinutes, setTotalMinutes] = useState(120);
   const [sleepSatisfaction, setSleepSatisfaction] = useState(null);
@@ -46,6 +46,67 @@ function App() {
   const audioSynth = useRef(new SleepAudioSynth());
   const volumeTimeoutRef = useRef(null);
   const touchStartY = useRef(0);
+
+  // Radial dial drag states & refs
+  const dialRef = useRef(null);
+  const [isDialDragging, setIsDialDragging] = useState(false);
+
+  const handleDialMove = (clientX, clientY) => {
+    if (!dialRef.current) return;
+    const rect = dialRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = clientX - centerX;
+    const dy = clientY - centerY;
+    
+    let angle = Math.atan2(dy, dx) + Math.PI / 2;
+    if (angle < 0) angle += 2 * Math.PI;
+    
+    // Map angle to 1 - 120 minutes
+    const pct = angle / (2 * Math.PI);
+    const minutes = Math.round(pct * 119) + 1;
+    setTimerDuration(Math.max(1, Math.min(120, minutes)));
+  };
+
+  const handleDialMouseDown = (e) => {
+    setIsDialDragging(true);
+    handleDialMove(e.clientX, e.clientY);
+  };
+
+  const handleDialTouchStart = (e) => {
+    setIsDialDragging(true);
+    handleDialMove(e.touches[0].clientX, e.touches[0].clientY);
+  };
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (e) => {
+      if (isDialDragging) {
+        handleDialMove(e.clientX, e.clientY);
+      }
+    };
+
+    const handleGlobalTouchMove = (e) => {
+      if (isDialDragging) {
+        handleDialMove(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      setIsDialDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    window.addEventListener('touchmove', handleGlobalTouchMove);
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    window.addEventListener('touchend', handleGlobalMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('touchmove', handleGlobalTouchMove);
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+      window.removeEventListener('touchend', handleGlobalMouseUp);
+    };
+  }, [isDialDragging]);
 
   // Read initial stats from localStorage
   useEffect(() => {
@@ -350,18 +411,67 @@ function App() {
             <div className="glass-card">
               <h2>수면 의식 설정</h2>
               
-              <div className="slider-container">
-                <div className="slider-label">
-                  <span>수면 유도 음향 시간</span>
-                  <span className="value">{timerDuration}분</span>
+              <div className="radial-dial-container">
+                <div 
+                  ref={dialRef}
+                  className="dial-wrapper"
+                  onMouseDown={handleDialMouseDown}
+                  onTouchStart={handleDialTouchStart}
+                >
+                  <svg className="dial-svg" viewBox="0 0 180 180">
+                    <defs>
+                      <linearGradient id="dial-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="var(--accent)" />
+                        <stop offset="100%" stopColor="var(--accent-dim)" />
+                      </linearGradient>
+                    </defs>
+                    
+                    {/* Background Track */}
+                    <circle className="dial-bg" cx="90" cy="90" r="75" />
+                    
+                    {/* Active Progress Arc */}
+                    <circle 
+                      className="dial-progress" 
+                      cx="90" 
+                      cy="90" 
+                      r="75" 
+                      strokeDasharray="471.24"
+                      strokeDashoffset={471.24 * (1 - (timerDuration - 1) / 119)}
+                    />
+                    
+                    {/* Rotating Handle */}
+                    <circle 
+                      className="dial-handle" 
+                      cx={90 + 75 * Math.cos(((timerDuration - 1) / 119) * 2 * Math.PI - Math.PI / 2)} 
+                      cy={90 + 75 * Math.sin(((timerDuration - 1) / 119) * 2 * Math.PI - Math.PI / 2)} 
+                      r="10" 
+                    />
+                  </svg>
+                  
+                  {/* Center time reading */}
+                  <div className="dial-center-info">
+                    <span className="minutes">{timerDuration}</span>
+                    <span className="unit">분</span>
+                  </div>
                 </div>
-                <input 
-                  type="range" 
-                  min="1" 
-                  max="5" 
-                  value={timerDuration} 
-                  onChange={(e) => setTimerDuration(parseInt(e.target.value, 10))}
-                />
+
+                {/* Quick Presets */}
+                <div className="presets-container">
+                  {[15, 30, 60, 90].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      className={`preset-btn ${timerDuration === preset ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTimerDuration(preset);
+                        triggerHaptic(50);
+                      }}
+                    >
+                      {preset}분
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div style={{ marginTop: '20px' }}>
