@@ -739,7 +739,7 @@ function App() {
 
                 {/* Quick Presets */}
                 <div className="presets-container">
-                  {[15, 30, 60, 90].map((preset) => (
+                  {[15, 30, 45, 60].map((preset) => (
                     <button
                       key={preset}
                       type="button"
