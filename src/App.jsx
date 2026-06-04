@@ -35,6 +35,12 @@ function App() {
   const [stretchDuration, setStretchDuration] = useState(15); // seconds per stretch: 10, 15, 20, 30
   const [breathCyclesMax, setBreathCyclesMax] = useState(3); // breathing cycles count: 3, 4, 6, 8
   
+  // Sleep Reservation Timer
+  const [reserveMinutes, setReserveMinutes] = useState(60); // default 60 minutes
+  const [isReserveActive, setIsReserveActive] = useState(false);
+  const [reserveSecondsLeft, setReserveSecondsLeft] = useState(0);
+  const [showAutomationGuide, setShowAutomationGuide] = useState(false);
+  
   // Ritual Step 1: Device Charge
   const [isChargerConnected, setIsChargerConnected] = useState(false);
   const [orientationSimulation, setOrientationSimulation] = useState(false); // Simulate face down for testing
@@ -135,6 +141,92 @@ function App() {
       window.removeEventListener('touchend', handleGlobalMouseUp);
     };
   }, [isDialDragging]);
+
+  // Sleep Reservation Countdown
+  useEffect(() => {
+    let interval;
+    if (isReserveActive && reserveSecondsLeft > 0) {
+      interval = setInterval(() => {
+        setReserveSecondsLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            triggerReservationAlarm();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isReserveActive, reserveSecondsLeft]);
+
+  const playReservationChime = () => {
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioContextClass();
+      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.15);
+        
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + idx * 0.15 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.15 + 0.4);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + idx * 0.15);
+        osc.stop(ctx.currentTime + idx * 0.15 + 0.55);
+      });
+    } catch (e) {
+      console.warn("Audio Context alert blocked or failed", e);
+    }
+  };
+
+  const triggerReservationAlarm = () => {
+    triggerHaptic([300, 100, 300, 100, 300, 100, 500]);
+    playReservationChime();
+    setIsReserveActive(false);
+    setScreen('step3'); // Force transition to Step 1 (Tomorrow's To-Do list screen)
+    
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification("⏰ 슬립릿 수면 예약 완료!", {
+        body: "약속된 수면 의식 시간입니다. 모든 앱을 종료하고 스마트폰 디톡스를 시작하세요.",
+        icon: "/favicon.ico"
+      });
+    }
+  };
+
+  const handleStartReservation = (minutes) => {
+    triggerHaptic(80);
+    setReserveSecondsLeft(Math.round(minutes * 60));
+    setIsReserveActive(true);
+    
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  };
+
+  const handleCancelReservation = () => {
+    triggerHaptic(50);
+    setIsReserveActive(false);
+    setReserveSecondsLeft(0);
+  };
+
+  const formatReserveTime = (secs) => {
+    const hrs = Math.floor(secs / 3600);
+    const mins = Math.floor((secs % 3600) / 60);
+    const remaining = secs % 60;
+    
+    const hStr = hrs > 0 ? `${hrs}시간 ` : '';
+    const mStr = mins > 0 ? `${mins}분 ` : '';
+    const sStr = `${remaining}초`;
+    
+    return `${hStr}${mStr}${sStr}`;
+  };
 
   // Read initial stats from localStorage
   useEffect(() => {
@@ -639,6 +731,80 @@ function App() {
                 오늘 밤, 스마트폰 도파민 중독을 끊고<br />
                 나를 위한 아늑한 취침 의식을 시작하세요.
               </p>
+            </div>
+
+            {/* Sleep Reservation Timer Card */}
+            <div className="glass-card timer-card" style={{ marginBottom: '16px', background: 'rgba(255, 159, 67, 0.05)', border: '1px solid rgba(255, 159, 67, 0.15)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <h2 style={{ margin: 0, fontSize: '15px', color: 'var(--accent)' }}>수면 예약 타이머 ⏰</h2>
+                <button 
+                  type="button" 
+                  style={{ background: 'transparent', border: 'none', color: 'var(--accent-dim)', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                  onClick={() => { triggerHaptic(50); setShowAutomationGuide(true); }}
+                >
+                  기기 차단 가이드 ❓
+                </button>
+              </div>
+
+              {!isReserveActive ? (
+                <>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px', textAlign: 'left', lineHeight: '1.4' }}>
+                    설정한 시간 후에 자동으로 알림음과 진동이 울리며 수면 의식 화면이 강제로 실행됩니다.
+                  </p>
+                  
+                  {/* Preset Buttons for Sleep Reservation */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '8px' }}>
+                    {[15, 30, 60].map(mins => (
+                      <button
+                        key={mins}
+                        type="button"
+                        className="preset-btn"
+                        style={{ padding: '8px 0', fontSize: '11px' }}
+                        onClick={() => handleStartReservation(mins)}
+                      >
+                        {mins >= 60 ? `${mins / 60}시간 후` : `${mins}분 후`}
+                      </button>
+                    ))}
+                    {[120, 180].map(mins => (
+                      <button
+                        key={mins}
+                        type="button"
+                        className="preset-btn"
+                        style={{ padding: '8px 0', fontSize: '11px' }}
+                        onClick={() => handleStartReservation(mins)}
+                      >
+                        {mins / 60}시간 후
+                      </button>
+                    ))}
+                    {/* Instant Test button */}
+                    <button
+                      type="button"
+                      className="preset-btn"
+                      style={{ padding: '8px 0', fontSize: '11px', borderColor: 'var(--accent)', color: 'var(--accent)' }}
+                      onClick={() => handleStartReservation(0.1)} // 6 seconds for testing
+                    >
+                      테스트 (6초)
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                  <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent)', marginBottom: '4px' }}>
+                    {formatReserveTime(reserveSecondsLeft)} 후 시작
+                  </div>
+                  <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                    백그라운드 안내: 이 탭을 켜 두시거나 브라우저 푸시 알림 권한을 켜 두세요.
+                  </p>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ padding: '6px 16px', fontSize: '12px', width: 'auto', margin: '0 auto' }}
+                    onClick={handleCancelReservation}
+                  >
+                    예약 취소
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Set Timer settings */}
@@ -1571,6 +1737,70 @@ function App() {
                     </div>
                   </>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AUTOMATION GUIDE MODAL */}
+        {showAutomationGuide && (
+          <div className="settings-modal-overlay" onClick={() => setShowAutomationGuide(false)}>
+            <div className="settings-modal-content" style={{ maxHeight: '85%', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+              <div className="settings-modal-header">
+                <h2>기기 자동화 & 앱 차단 가이드</h2>
+                <button 
+                  type="button" 
+                  className="settings-modal-close" 
+                  onClick={() => setShowAutomationGuide(false)}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="settings-modal-body" style={{ overflowY: 'auto', textAlign: 'left', fontSize: '13px', lineHeight: '1.6' }}>
+                <div style={{ background: 'rgba(255, 159, 67, 0.08)', border: '1px solid rgba(255,159,67,0.2)', padding: '12px', borderRadius: '12px', marginBottom: '16px' }}>
+                  <strong>⚠️ 모바일 브라우저의 한계 및 대안 안내</strong>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', margin: 0 }}>
+                    iOS 및 Android OS의 보안 규정상, 브라우저 웹앱이 인스타그램이나 유튜브 같은 타사 네이티브 앱을 강제 종료(Kill)하거나 백그라운드 상태에서 스스로를 화면 전면으로 활성화시키는 것은 불가합니다.<br />
+                    대신 아래의 <strong>단축어/모드 및 루틴</strong> 기능을 이용하면 원하시는 시점에 타사 앱 차단 및 슬립릿 실행을 자동화할 수 있습니다!
+                  </p>
+                </div>
+
+                <h3 style={{ fontSize: '14px', color: 'var(--accent)', marginBottom: '4px', fontWeight: 'bold' }}>🤖 안드로이드 (갤럭시 모드 및 루틴)</h3>
+                <ol style={{ paddingLeft: '20px', marginBottom: '12px', fontSize: '12px', color: 'var(--text-main)' }}>
+                  <li>스마트폰 설정 앱 &gt; <strong>모드 및 루틴</strong>에 진입합니다.</li>
+                  <li>루틴 탭에서 새 루틴을 추가하고, <strong>'언제 실행할까요?'</strong> 조건으로 <strong>'시간'</strong> 또는 <strong>'특정 시간 동안'</strong>을 설정합니다.</li>
+                  <li><strong>'무엇을 할까요?'</strong> 동작으로 다음 항목들을 설정합니다:
+                    <ul style={{ paddingLeft: '20px', marginTop: '4px', listStyleType: 'circle' }}>
+                      <li><strong>앱 열기</strong>: 크롬 또는 브라우저 선택 후 SleepRit 웹 페이지 연결</li>
+                      <li><strong>앱 제한</strong>: 유튜브, 카카오톡, 인스타 등을 차단 목록으로 등록</li>
+                    </ul>
+                  </li>
+                </ol>
+
+                <h3 style={{ fontSize: '14px', color: 'var(--accent)', marginBottom: '4px', fontWeight: 'bold' }}>🍎 아이폰 (iOS 단축어)</h3>
+                <ol style={{ paddingLeft: '20px', marginBottom: '12px', fontSize: '12px', color: 'var(--text-main)' }}>
+                  <li><strong>'단축어(Shortcuts)'</strong> 앱 &gt; 하단 <strong>'개인화 자동화'</strong>로 이동합니다.</li>
+                  <li>새로운 자동화를 추가하고 <strong>'특정 시간'</strong> 또는 <strong>'취침 시간 예약'</strong>을 조건으로 선택합니다.</li>
+                  <li>자동화 실행 동작으로 다음 동작들을 구성합니다:
+                    <ul style={{ paddingLeft: '20px', marginTop: '4px', listStyleType: 'circle' }}>
+                      <li><strong>'URL 열기'</strong>: 슬립릿 접속 주소를 입력합니다.</li>
+                      <li><strong>'앱 사용 시간 제한'</strong>(스크린 타임) 설정을 이용해 타사 SNS/유튜브 제한을 활성화합니다.</li>
+                    </ul>
+                  </li>
+                </ol>
+
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '12px', fontStyle: 'italic' }}>
+                  💡 슬립릿 예약 타이머는 브라우저가 켜져 있거나 푸시 알림 수신 상태일 때 햅틱 경고와 사운드를 울려, 스마트폰을 내려놓고 의식(To-Do 작성 및 기기 연결)을 완료하도록 강력히 독려합니다.
+                </p>
+                
+                <button 
+                  type="button" 
+                  className="btn-primary" 
+                  style={{ marginTop: '16px' }}
+                  onClick={() => setShowAutomationGuide(false)}
+                >
+                  확인했습니다
+                </button>
               </div>
             </div>
           </div>
