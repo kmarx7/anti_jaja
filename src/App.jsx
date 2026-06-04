@@ -40,6 +40,7 @@ function App() {
   const [isReserveActive, setIsReserveActive] = useState(false);
   const [reserveSecondsLeft, setReserveSecondsLeft] = useState(0);
   const [showAutomationGuide, setShowAutomationGuide] = useState(false);
+  const [showReservationStartModal, setShowReservationStartModal] = useState(false);
   
   // Ritual Step 1: Device Charge
   const [isChargerConnected, setIsChargerConnected] = useState(false);
@@ -190,6 +191,7 @@ function App() {
     triggerHaptic([300, 100, 300, 100, 300, 100, 500]);
     playReservationChime();
     setIsReserveActive(false);
+    setShowReservationStartModal(false);
     setScreen('step3'); // Force transition to Step 1 (Tomorrow's To-Do list screen)
     
     if ('Notification' in window && Notification.permission === 'granted') {
@@ -205,6 +207,11 @@ function App() {
     setReserveSecondsLeft(Math.round(minutes * 60));
     setIsReserveActive(true);
     
+    // Only show guide modal for real scheduled timers (not instant 6s tests)
+    if (minutes > 0.5) {
+      setShowReservationStartModal(true);
+    }
+    
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
@@ -214,6 +221,7 @@ function App() {
     triggerHaptic(50);
     setIsReserveActive(false);
     setReserveSecondsLeft(0);
+    setShowReservationStartModal(false);
   };
 
   const formatReserveTime = (secs) => {
@@ -1825,6 +1833,72 @@ function App() {
                 >
                   확인했습니다
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* RESERVATION START MODAL */}
+        {showReservationStartModal && (
+          <div className="settings-modal-overlay" onClick={() => setShowReservationStartModal(false)}>
+            <div className="settings-modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="settings-modal-header">
+                <h2>수면 예약 타이머 작동 시작 ⏰</h2>
+                <button 
+                  type="button" 
+                  className="settings-modal-close" 
+                  onClick={() => setShowReservationStartModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="settings-modal-body" style={{ textAlign: 'left', fontSize: '13px', lineHeight: '1.6' }}>
+                <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                  <span style={{ fontSize: '48px', display: 'block', marginBottom: '8px' }}>⏰</span>
+                  <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'var(--accent)' }}>
+                    {Math.floor(timerDuration / 60) > 0 ? `${Math.floor(timerDuration / 60)}시간 ` : ''}
+                    {timerDuration % 60 > 0 ? `${timerDuration % 60}분 ` : ''}
+                    후 예약 실행
+                  </div>
+                </div>
+
+                <p style={{ marginBottom: '12px' }}>
+                  <strong>수면 예약 타이머가 정상 동작 중입니다!</strong> 이제 아래 단계에 따라 안심하고 다른 업무나 즐길 거리를 하셔도 좋습니다.
+                </p>
+
+                <ul style={{ paddingLeft: '20px', marginBottom: '16px', listStyleType: 'decimal' }}>
+                  <li style={{ marginBottom: '8px' }}>
+                    <strong>앱 최소화</strong>: 지금 홈 버튼을 누르거나 화면을 쓸어 올려 SleepRit 브라우저 탭을 백그라운드로 전환하고 유튜브나 다른 소셜 앱을 사용하세요.
+                  </li>
+                  <li style={{ marginBottom: '8px' }}>
+                    <strong>백그라운드 알림 대기</strong>: 약속한 시간이 되면 <strong>웹 푸시 알림</strong>과 함께 우렁찬 <strong>경고 오디오 사운드, 햅틱 진동</strong>이 발생합니다.
+                  </li>
+                  <li>
+                    <strong>슬립릿 복귀</strong>: 알림을 누르거나 슬립릿 브라우저 창으로 복귀하는 즉시, 화면이 강제 고정되어 수면 전 디톡스 의식(할 일 리스트 정리, 충전 연결 등) 단계가 실행됩니다.
+                  </li>
+                </ul>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
+                  <button 
+                    type="button" 
+                    className="btn-primary" 
+                    onClick={() => setShowReservationStartModal(false)}
+                  >
+                    이해했습니다 (홈으로 나가기)
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn-secondary" 
+                    style={{ border: '1px dashed var(--accent)', color: 'var(--accent)' }}
+                    onClick={() => {
+                      setShowReservationStartModal(false);
+                      setShowAutomationGuide(true);
+                      triggerHaptic(50);
+                    }}
+                  >
+                    기기 차단 자동화 가이드 보기
+                  </button>
+                </div>
               </div>
             </div>
           </div>
