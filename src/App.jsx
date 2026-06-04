@@ -40,6 +40,11 @@ function App() {
   const [newTodo, setNewTodo] = useState('');
   const [isSavingTodos, setIsSavingTodos] = useState(false);
 
+  // Ritual Step 1.5: Offline Stretching Guide
+  const [stretchIndex, setStretchIndex] = useState(0);
+  const [stretchSecondsLeft, setStretchSecondsLeft] = useState(15);
+  const [isStretchActive, setIsStretchActive] = useState(false);
+
   // Blackout (Sleep Mode) Screen
   const [secondsRemaining, setSecondsRemaining] = useState(0);
   const [volume, setVolume] = useState(0.5);
@@ -303,6 +308,42 @@ function App() {
   // Action: Charge completes or simulated flip flat
   const handleNextFromStep1 = () => {
     triggerHaptic(150);
+    setScreen('stretching');
+    setStretchIndex(0);
+    setStretchSecondsLeft(15);
+    setIsStretchActive(true);
+  };
+
+  // Stretching countdown effect
+  useEffect(() => {
+    let interval;
+    if (screen === 'stretching' && isStretchActive && stretchSecondsLeft > 0) {
+      interval = setInterval(() => {
+        setStretchSecondsLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            handleStretchTimerComplete();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [screen, isStretchActive, stretchSecondsLeft, stretchIndex]);
+
+  const handleStretchTimerComplete = () => {
+    triggerHaptic(120);
+    if (stretchIndex < 2) {
+      setStretchIndex(prev => prev + 1);
+      setStretchSecondsLeft(15);
+    } else {
+      setScreen('step2');
+    }
+  };
+
+  const handleSkipStretching = () => {
+    triggerHaptic(50);
     setScreen('step2');
   };
 
@@ -787,6 +828,96 @@ function App() {
               onClick={handleNextFromStep1}
             >
               연결 완료
+            </button>
+          </div>
+        )}
+
+        {/* STEP 1.5: OFFLINE STRETCHING GUIDE */}
+        {screen === 'stretching' && (
+          <div className="fade-enter-active" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+            <button className="exit-ritual" onClick={() => setScreen('dashboard')}>✕</button>
+
+            <div>
+              <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
+                의식 1.5단계
+              </div>
+              <h2 style={{ fontSize: '24px' }}>취침 전 이완 스트레칭</h2>
+              <p style={{ marginTop: '8px', fontSize: '13px' }}>
+                근육의 긴장을 풀고 신체를 편안한 수면 대기 상태로 유도합니다.
+              </p>
+            </div>
+
+            {/* Stretch Card */}
+            <div className="glass-card" style={{ padding: '24px', margin: '20px 0', textAlign: 'center' }}>
+              <div style={{ fontSize: '48px', marginBottom: '12px' }}>
+                {stretchIndex === 0 && "🧘"}
+                {stretchIndex === 1 && "🙆‍♀️"}
+                {stretchIndex === 2 && "🤸"}
+              </div>
+              <h3 style={{ fontSize: '18px', color: 'var(--accent)', marginBottom: '8px' }}>
+                {stretchIndex === 0 && "1. 어깨와 가슴 열기"}
+                {stretchIndex === 1 && "2. 목 라인 이완하기"}
+                {stretchIndex === 2 && "3. 상체 옆선 늘리기"}
+              </h3>
+              <p style={{ fontSize: '14px', lineHeight: '1.6' }}>
+                {stretchIndex === 0 && "어깨를 뒤로 가볍게 돌려 가슴을 넓게 열고, 척추를 세운 채 기분 좋은 자극을 느끼며 호흡하세요."}
+                {stretchIndex === 1 && "머리를 오른쪽으로 지긋이 늘려 좌측 목덜미와 승모근을 이완합니다. 반대쪽도 가볍게 풀어줍니다."}
+                {stretchIndex === 2 && "깍지 낀 손을 하늘 높이 밀고 몸통을 좌우로 기울이며 굳어 있던 옆구리와 갈비뼈 주변을 풀어줍니다."}
+              </p>
+            </div>
+
+            {/* Circular Timer UI */}
+            <div className="stretching-timer-container">
+              <div className="stretching-timer-circle">
+                <span className="seconds">{stretchSecondsLeft}s</span>
+                <span className="label">{isStretchActive ? "진행 중" : "일시 정지"}</span>
+              </div>
+            </div>
+
+            {/* Dots indicator */}
+            <div className="stretching-dot-indicator">
+              {[0, 1, 2].map((idx) => (
+                <div key={idx} className={`stretch-dot ${idx === stretchIndex ? 'active' : ''}`} />
+              ))}
+            </div>
+
+            {/* Action buttons */}
+            <div className="stretching-controls">
+              <button 
+                type="button" 
+                className="btn-secondary" 
+                style={{ flex: 1 }}
+                onClick={() => setIsStretchActive(!isStretchActive)}
+              >
+                {isStretchActive ? "일시정지" : "재개"}
+              </button>
+              <button 
+                type="button" 
+                className="btn-primary" 
+                style={{ flex: 1.5 }}
+                onClick={() => {
+                  if (stretchIndex < 2) {
+                    setStretchIndex(stretchIndex + 1);
+                    setStretchSecondsLeft(15);
+                    setIsStretchActive(true);
+                    triggerHaptic(50);
+                  } else {
+                    setScreen('step2');
+                    triggerHaptic(100);
+                  }
+                }}
+              >
+                {stretchIndex < 2 ? "다음 동작" : "스트레칭 완료"}
+              </button>
+            </div>
+
+            <button 
+              type="button" 
+              className="btn-secondary"
+              style={{ marginTop: '12px', border: 'none', background: 'transparent', color: 'var(--text-muted)' }}
+              onClick={handleSkipStretching}
+            >
+              스트레칭 건너뛰기
             </button>
           </div>
         )}
