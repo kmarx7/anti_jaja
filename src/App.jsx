@@ -25,6 +25,7 @@ function App() {
   const [totalMinutes, setTotalMinutes] = useState(120);
   const [sleepSatisfaction, setSleepSatisfaction] = useState(null);
   const [sleepMusicDuration, setSleepMusicDuration] = useState(30); // Default sleep music playback: 30 minutes
+  const [isLiteMode, setIsLiteMode] = useState(() => localStorage.getItem('sleep_rit_lite_mode') !== 'false'); // Default to true (Free tier)
   
   // Settings Modal & Dashboard Logs
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -162,6 +163,11 @@ function App() {
     return () => clearInterval(interval);
   }, [isReserveActive, reserveSecondsLeft]);
 
+  // Persist Lite Mode
+  useEffect(() => {
+    localStorage.setItem('sleep_rit_lite_mode', isLiteMode.toString());
+  }, [isLiteMode]);
+
   const playReservationChime = () => {
     try {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -193,7 +199,11 @@ function App() {
     playReservationChime();
     setIsReserveActive(false);
     setShowReservationStartModal(false);
-    setScreen('step3'); // Force transition to Step 1 (Tomorrow's To-Do list screen)
+    if (isLiteMode) {
+      setScreen('step1'); // Go straight to Charger/Isolation screen in Lite Mode
+    } else {
+      setScreen('step3'); // Force transition to Step 1 (Tomorrow's To-Do list screen)
+    }
     
     if ('Notification' in window && Notification.permission === 'granted') {
       new Notification("⏰ 슬립릿 수면 예약 완료!", {
@@ -395,7 +405,18 @@ function App() {
       
       // Load individual channel mix volume levels immediately
       Object.keys(soundMix).forEach(channel => {
-        audioSynth.current.setChannelVolume(channel, soundMix[channel]);
+        if (isLiteMode) {
+          // Lite Mode plays rain at 0.5, pad at 0.2, others at 0.0
+          if (channel === 'rain') {
+            audioSynth.current.setChannelVolume(channel, 0.5);
+          } else if (channel === 'pad') {
+            audioSynth.current.setChannelVolume(channel, 0.2);
+          } else {
+            audioSynth.current.setChannelVolume(channel, 0.0);
+          }
+        } else {
+          audioSynth.current.setChannelVolume(channel, soundMix[channel]);
+        }
       });
 
       // Start countdown
@@ -447,10 +468,14 @@ function App() {
   // Action: Charge completes or simulated flip flat
   const handleNextFromStep1 = () => {
     triggerHaptic(150);
-    setScreen('stretching');
-    setStretchIndex(0);
-    setStretchSecondsLeft(stretchDuration);
-    setIsStretchActive(true);
+    if (isLiteMode) {
+      setScreen('blackout');
+    } else {
+      setScreen('stretching');
+      setStretchIndex(0);
+      setStretchSecondsLeft(stretchDuration);
+      setIsStretchActive(true);
+    }
   };
 
   // Stretching countdown effect
@@ -739,6 +764,24 @@ function App() {
               </div>
             </div>
 
+            {/* Mode Toggle Switch (Lite vs Pro) */}
+            <div className="mode-toggle-container">
+              <button 
+                type="button"
+                className={`mode-toggle-btn ${isLiteMode ? 'active' : ''}`}
+                onClick={() => { setIsLiteMode(true); triggerHaptic(40); }}
+              >
+                🍃 심플 모드 (무료)
+              </button>
+              <button 
+                type="button"
+                className={`mode-toggle-btn ${!isLiteMode ? 'active' : ''}`}
+                onClick={() => { setIsLiteMode(false); triggerHaptic(40); }}
+              >
+                ✨ 프리미엄 모드 (프로)
+              </button>
+            </div>
+
             <div className="calming-greeting-card">
               <span className="candle-glow-icon">🕯️</span>
               <p className="calming-quote">
@@ -772,7 +815,14 @@ function App() {
               return (
                 <div className="glass-card timer-card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <h2 style={{ margin: 0 }}>수면 예약 타이머 ⏰</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <h2 style={{ margin: 0 }}>수면 예약 타이머 ⏰</h2>
+                      {isLiteMode && (
+                        <span style={{ fontSize: '10px', background: 'rgba(255, 159, 67, 0.1)', color: 'var(--accent)', padding: '2px 6px', borderRadius: '8px', border: '1px solid rgba(255, 159, 67, 0.2)', fontWeight: 'bold' }}>
+                          무료
+                        </span>
+                      )}
+                    </div>
                     <button 
                       type="button" 
                       style={{ background: 'transparent', border: 'none', color: 'var(--accent)', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
@@ -963,10 +1013,14 @@ function App() {
             
             <div style={{ marginTop: '20px' }}>
               <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
-                의식 2단계
+                {isLiteMode ? "수면 준비" : "의식 2단계"}
               </div>
-              <h2 style={{ fontSize: '24px', lineHeight: '1.3' }}>AI 수면 코치와 생각 비우기</h2>
-              <h3 style={{ fontSize: '16px', color: 'var(--text-muted)', marginTop: '6px', marginBottom: '12px', fontWeight: '500' }}>기기 격리 및 전원 연결</h3>
+              <h2 style={{ fontSize: '24px', lineHeight: '1.3' }}>
+                {isLiteMode ? "기기 격리 및 전원 연결" : "AI 수면 코치와 생각 비우기"}
+              </h2>
+              {!isLiteMode && (
+                <h3 style={{ fontSize: '16px', color: 'var(--text-muted)', marginTop: '6px', marginBottom: '12px', fontWeight: '500' }}>기기 격리 및 전원 연결</h3>
+              )}
               <p style={{ marginTop: '8px', fontSize: '14px' }}>
                 스마트폰 충전기를 꽂고 침대에서 최소 2m 이상 떨어진 무드등 테이블 위에 놓아주세요.
               </p>
@@ -975,14 +1029,36 @@ function App() {
             {/* Box 3 (Now 1st): AI Sleep Coach Chatbot */}
             <div 
               className="glass-card clickable-card" 
-              style={{ cursor: 'pointer', border: '1px solid rgba(255, 159, 67, 0.15)', margin: '12px 0 0 0', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}
-              onClick={() => { triggerHaptic(50); setScreen('coach-bot'); }}
+              style={{ 
+                cursor: isLiteMode ? 'not-allowed' : 'pointer', 
+                border: isLiteMode ? '1px dashed rgba(255, 255, 255, 0.1)' : '1px solid rgba(255, 159, 67, 0.15)', 
+                margin: '12px 0 0 0', 
+                padding: '16px 20px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '12px',
+                opacity: isLiteMode ? 0.5 : 1
+              }}
+              onClick={() => { 
+                if (isLiteMode) {
+                  triggerHaptic(100);
+                  alert("💬 AI 수면 코칭은 프리미엄 전용 기능입니다. 대시보드 상단에서 프리미엄 모드로 전환해 보세요!");
+                } else {
+                  triggerHaptic(50); 
+                  setScreen('coach-bot'); 
+                }
+              }}
             >
-              <div style={{ fontSize: '28px' }}>💬</div>
+              <div style={{ fontSize: '28px' }}>{isLiteMode ? '🔒' : '💬'}</div>
               <div style={{ textAlign: 'left' }}>
-                <h3 style={{ fontSize: '14px', margin: 0, color: 'var(--accent)' }}>AI 수면 코치와 생각 비우기</h3>
+                <h3 style={{ fontSize: '14px', margin: 0, color: isLiteMode ? 'var(--text-muted)' : 'var(--accent)' }}>
+                  AI 수면 코치와 생각 비우기 {isLiteMode && "✨"}
+                </h3>
                 <p style={{ fontSize: '11px', margin: '2px 0 0 0', color: 'var(--text-muted)' }}>
-                  잠을 방해하는 잡념과 스트레스를 코치와 나누며 머릿속을 비우세요.
+                  {isLiteMode 
+                    ? "내 생각과 스트레스를 비우는 AI 수면 코칭 (프로 전용)" 
+                    : "잠을 방해하는 잡념과 스트레스를 코치와 나누며 머릿속을 비우세요."
+                  }
                 </p>
               </div>
             </div>
@@ -1528,12 +1604,12 @@ function App() {
               <div className="settings-modal-body">
                 {settingsTab === 'sounds' ? (
                   <div className="glass-card modal-card" style={{ padding: '0', background: 'transparent', border: 'none', boxShadow: 'none' }}>
-                    <div style={{ marginBottom: '16px', textAlign: 'left' }}>
+                    <div style={{ marginBottom: '16px', textAlign: 'left', position: 'relative' }}>
                       <span style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block', fontWeight: '600', marginBottom: '12px' }}>
                         수면 환경음 사운드 믹서 🎛️
                       </span>
                       
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', opacity: isLiteMode ? 0.35 : 1, pointerEvents: isLiteMode ? 'none' : 'auto' }}>
                         {[
                           { key: 'pad', label: '명상 비트 패드 🧘', desc: '델타파 바이노럴 비트 합성음' },
                           { key: 'rain', label: '차분한 빗소리 🌧️', desc: '노이즈 캔슬링 효과 백색소음' },
@@ -1559,6 +1635,34 @@ function App() {
                           </div>
                         ))}
                       </div>
+
+                      {isLiteMode && (
+                        <div style={{
+                          position: 'absolute',
+                          top: 25,
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          background: 'rgba(7, 9, 19, 0.45)',
+                          backdropFilter: 'blur(3px)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '16px',
+                          border: '1px dashed rgba(255, 159, 67, 0.3)',
+                          padding: '12px',
+                          textAlign: 'center',
+                          zIndex: 5
+                        }}>
+                          <div>
+                            <span style={{ fontSize: '20px', display: 'block', marginBottom: '4px' }}>🔒 ✨</span>
+                            <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--accent)' }}>프리미엄 사운드 믹서</span>
+                            <p style={{ fontSize: '9px', color: 'var(--text-muted)', margin: '4px 0 0 0', lineHeight: '1.3' }}>
+                              음원들을 커스텀 조율하는 것은 프로 전용입니다.<br />무료 모드에서는 잔잔한 빗소리가 자동 재생됩니다.
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="glass-card modal-card" style={{ padding: '0', background: 'transparent', border: 'none', boxShadow: 'none', marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
@@ -1594,60 +1698,93 @@ function App() {
                         </div>
                       </div>
 
-                      {/* Stretching Pose Duration */}
-                      <div style={{ background: 'rgba(255,255,255,0.01)', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)', marginBottom: '12px', textAlign: 'left' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 'bold' }}>3단계: 스트레칭 시간 🧘</span>
-                          <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>동작당 {stretchDuration}초</span>
-                        </div>
-                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                          각 스트레칭 자세를 유지할 시간을 설정합니다.
-                        </p>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          {[10, 15, 20, 30].map(sec => (
-                            <button
-                              key={sec}
-                              type="button"
-                              className={`preset-btn ${stretchDuration === sec ? 'active' : ''}`}
-                              style={{ padding: '6px 0', fontSize: '12px' }}
-                              onClick={() => {
-                                setStretchDuration(sec);
-                                localStorage.setItem('sleep_rit_stretch_dur', sec.toString());
-                                triggerHaptic(50);
-                              }}
-                            >
-                              {sec}초
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                      {/* Locked Pro Steps settings wrapper */}
+                      <div style={{ position: 'relative', marginTop: '12px' }}>
+                        <div style={{ opacity: isLiteMode ? 0.35 : 1, pointerEvents: isLiteMode ? 'none' : 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {/* Stretching Pose Duration */}
+                          <div style={{ background: 'rgba(255,255,255,0.01)', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'left' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                              <span style={{ fontWeight: 'bold' }}>3단계: 스트레칭 시간 🧘</span>
+                              <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>동작당 {stretchDuration}초</span>
+                            </div>
+                            <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                              각 스트레칭 자세를 유지할 시간을 설정합니다.
+                            </p>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              {[10, 15, 20, 30].map(sec => (
+                                <button
+                                  key={sec}
+                                  type="button"
+                                  className={`preset-btn ${stretchDuration === sec ? 'active' : ''}`}
+                                  style={{ padding: '6px 0', fontSize: '12px' }}
+                                  onClick={() => {
+                                    setStretchDuration(sec);
+                                    localStorage.setItem('sleep_rit_stretch_dur', sec.toString());
+                                    triggerHaptic(50);
+                                  }}
+                                >
+                                  {sec}초
+                                </button>
+                              ))}
+                            </div>
+                          </div>
 
-                      {/* Breathing Cycles count */}
-                      <div style={{ background: 'rgba(255,255,255,0.01)', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'left' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 'bold' }}>4단계: 이완 호흡 사이클 🌬️</span>
-                          <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{breathCyclesMax}회 반복</span>
+                          {/* Breathing Cycles count */}
+                          <div style={{ background: 'rgba(255,255,255,0.01)', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'left' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                              <span style={{ fontWeight: 'bold' }}>4단계: 이완 호흡 사이클 🌬️</span>
+                              <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{breathCyclesMax}회 반복</span>
+                            </div>
+                            <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                              4-7-8 이완 호흡을 반복할 횟수를 설정합니다.
+                            </p>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              {[3, 4, 6, 8].map(cycles => (
+                                <button
+                                  key={cycles}
+                                  type="button"
+                                  className={`preset-btn ${breathCyclesMax === cycles ? 'active' : ''}`}
+                                  style={{ padding: '6px 0', fontSize: '12px' }}
+                                  onClick={() => {
+                                    setBreathCyclesMax(cycles);
+                                    localStorage.setItem('sleep_rit_breath_cycles', cycles.toString());
+                                    triggerHaptic(50);
+                                  }}
+                                >
+                                  {cycles}회
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </div>
-                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                          4-7-8 이완 호흡을 반복할 횟수를 설정합니다.
-                        </p>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          {[3, 4, 6, 8].map(cycles => (
-                            <button
-                              key={cycles}
-                              type="button"
-                              className={`preset-btn ${breathCyclesMax === cycles ? 'active' : ''}`}
-                              style={{ padding: '6px 0', fontSize: '12px' }}
-                              onClick={() => {
-                                setBreathCyclesMax(cycles);
-                                localStorage.setItem('sleep_rit_breath_cycles', cycles.toString());
-                                triggerHaptic(50);
-                              }}
-                            >
-                              {cycles}회
-                            </button>
-                          ))}
-                        </div>
+
+                        {isLiteMode && (
+                          <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(7, 9, 19, 0.45)',
+                            backdropFilter: 'blur(3px)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '16px',
+                            border: '1px dashed rgba(255, 159, 67, 0.3)',
+                            padding: '12px',
+                            textAlign: 'center',
+                            zIndex: 5
+                          }}>
+                            <div>
+                              <span style={{ fontSize: '20px', display: 'block', marginBottom: '4px' }}>🔒 ✨</span>
+                              <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--accent)' }}>프리미엄 의식 단계 설정</span>
+                              <p style={{ fontSize: '9px', color: 'var(--text-muted)', margin: '4px 0 0 0', lineHeight: '1.3' }}>
+                                스트레칭 및 이완 호흡 설정은 프로 전용입니다.<br />무료 모드에서는 충전 연결 후 즉시 암전 모드로 넘어갑니다.
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -1278,3 +1278,37 @@ p {
   transform: translateY(0);
   background: rgba(255, 159, 67, 0.1) !important;
 }
+
+/* Mode Toggle Switch (Lite vs Pro) */
+.mode-toggle-container {
+  display: flex;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 24px;
+  padding: 4px;
+  margin: 4px 0 16px 0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.mode-toggle-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.mode-toggle-btn.active {
+  background: rgba(255, 159, 67, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(255, 159, 67, 0.2);
+  box-shadow: 0 4px 12px rgba(255, 159, 67, 0.08);
+}
