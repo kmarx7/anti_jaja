@@ -14,7 +14,12 @@ const SLEEP_MESSAGES = [
 function App() {
   // Navigation & States
   const [screen, setScreen] = useState('dashboard'); // 'dashboard' | 'step1' | 'step2' | 'step3' | 'blackout' | 'morning'
-  const [soundType, setSoundType] = useState('binaural'); // 'binaural' | 'ambient' | 'rain'
+  const [soundMix, setSoundMix] = useState({
+    pad: 0.4,
+    rain: 0.2,
+    fire: 0.0,
+    wind: 0.1
+  });
   const [timerDuration, setTimerDuration] = useState(15); // minutes (1 to 120)
   const [streak, setStreak] = useState(5);
   const [totalMinutes, setTotalMinutes] = useState(120);
@@ -125,6 +130,7 @@ function App() {
     const storedMinutes = localStorage.getItem('sleep_rit_minutes');
     const storedTodos = localStorage.getItem('sleep_rit_todos');
     const storedLogs = localStorage.getItem('sleep_rit_logs');
+    const storedMix = localStorage.getItem('sleep_rit_mix');
     
     if (storedStreak) setStreak(parseInt(storedStreak, 10));
     if (storedMinutes) setTotalMinutes(parseInt(storedMinutes, 10));
@@ -168,6 +174,12 @@ function App() {
       }
       setSleepLogs(mockLogs);
       localStorage.setItem('sleep_rit_logs', JSON.stringify(mockLogs));
+    }
+
+    if (storedMix) {
+      try {
+        setSoundMix(JSON.parse(storedMix));
+      } catch (e) {}
     }
   }, []);
 
@@ -257,7 +269,12 @@ function App() {
     if (screen === 'blackout') {
       // Initialize audio
       audioSynth.current.setVolume(volume);
-      audioSynth.current.start(soundType);
+      audioSynth.current.start();
+      
+      // Load individual channel mix volume levels immediately
+      Object.keys(soundMix).forEach(channel => {
+        audioSynth.current.setChannelVolume(channel, soundMix[channel]);
+      });
 
       // Start countdown
       setSecondsRemaining(timerDuration * 60);
@@ -411,6 +428,18 @@ function App() {
     localStorage.setItem('sleep_rit_logs', JSON.stringify(updatedLogs));
 
     setScreen('morning');
+  };
+
+  const handleMixVolumeChange = (channel, val) => {
+    const vol = parseFloat(val);
+    setSoundMix(prev => {
+      const updated = { ...prev, [channel]: vol };
+      localStorage.setItem('sleep_rit_mix', JSON.stringify(updated));
+      return updated;
+    });
+    if (audioSynth.current.isPlaying) {
+      audioSynth.current.setChannelVolume(channel, vol);
+    }
   };
 
   // Action: User interrupts sleep mode early
@@ -616,29 +645,36 @@ function App() {
                     </div>
                   </div>
 
-                  <div style={{ marginTop: '20px' }}>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', textAlign: 'left', marginBottom: '6px' }}>
-                      수면 사운드 유형
+                  <div style={{ marginTop: '20px', textAlign: 'left' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block', fontWeight: '600', marginBottom: '12px' }}>
+                      수면 환경음 사운드 믹서 🎛️
                     </span>
-                    <div className="sound-selector">
-                      <div 
-                        className={`sound-pill ${soundType === 'binaural' ? 'active' : ''}`}
-                        onClick={() => setSoundType('binaural')}
-                      >
-                        델타 바이노럴
-                      </div>
-                      <div 
-                        className={`sound-pill ${soundType === 'ambient' ? 'active' : ''}`}
-                        onClick={() => setSoundType('ambient')}
-                      >
-                        명상 패드
-                      </div>
-                      <div 
-                        className={`sound-pill ${soundType === 'rain' ? 'active' : ''}`}
-                        onClick={() => setSoundType('rain')}
-                      >
-                        자연의 비
-                      </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {[
+                        { key: 'pad', label: '명상 비트 패드 🧘', desc: '델타파 바이노럴 비트 합성음' },
+                        { key: 'rain', label: '차분한 빗소리 🌧️', desc: '노이즈 캔슬링 효과 백색소음' },
+                        { key: 'fire', label: '따뜻한 모닥불 🔥', desc: '아늑한 나무 타는 소리 신스' },
+                        { key: 'wind', label: '숲속의 바람 🍃', desc: '천연 횡격막 자극 바람음' }
+                      ].map((item) => (
+                        <div key={item.key} style={{ background: 'rgba(255,255,255,0.01)', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: 'bold' }}>{item.label}</span>
+                            <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{Math.round(soundMix[item.key] * 100)}%</span>
+                          </div>
+                          <div className="slider-label" style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                            {item.desc}
+                          </div>
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max="1" 
+                            step="0.05"
+                            value={soundMix[item.key]} 
+                            onChange={(e) => handleMixVolumeChange(item.key, e.target.value)}
+                          />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
