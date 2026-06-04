@@ -785,12 +785,29 @@ function App() {
               <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
                 의식 2단계
               </div>
-              <h2 style={{ fontSize: '24px', lineHeight: '1.3' }}>기기 격리 및 전원 연결</h2>
-              <p style={{ marginTop: '16px', fontSize: '15px' }}>
+              <h2 style={{ fontSize: '24px', lineHeight: '1.3' }}>AI 수면 코치와 생각 비우기</h2>
+              <h3 style={{ fontSize: '16px', color: 'var(--text-muted)', marginTop: '6px', marginBottom: '12px', fontWeight: '500' }}>기기 격리 및 전원 연결</h3>
+              <p style={{ marginTop: '8px', fontSize: '14px' }}>
                 스마트폰 충전기를 꽂고 침대에서 최소 2m 이상 떨어진 무드등 테이블 위에 놓아주세요.
               </p>
             </div>
 
+            {/* Box 3 (Now 1st): AI Sleep Coach Chatbot */}
+            <div 
+              className="glass-card clickable-card" 
+              style={{ cursor: 'pointer', border: '1px solid rgba(255, 159, 67, 0.15)', margin: '12px 0 0 0', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}
+              onClick={() => { triggerHaptic(50); setScreen('coach-bot'); }}
+            >
+              <div style={{ fontSize: '28px' }}>💬</div>
+              <div style={{ textAlign: 'left' }}>
+                <h3 style={{ fontSize: '14px', margin: 0, color: 'var(--accent)' }}>AI 수면 코치와 생각 비우기</h3>
+                <p style={{ fontSize: '11px', margin: '2px 0 0 0', color: 'var(--text-muted)' }}>
+                  잠을 방해하는 잡념과 스트레스를 코치와 나누며 머릿속을 비우세요.
+                </p>
+              </div>
+            </div>
+
+            {/* Box 1 (Now 2nd): Charger connection checkbox */}
             <div className="glass-card" style={{ margin: '12px 0', padding: '16px 20px', textAlign: 'left' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', marginBottom: '8px' }}>
                 <input 
@@ -807,7 +824,7 @@ function App() {
               </p>
             </div>
 
-            {/* Laptop/Desktop simulation card for Testing */}
+            {/* Box 2 (Now 3rd): Laptop/Desktop simulation card for Testing */}
             <div className="glass-card" style={{ margin: '0 0 12px 0', padding: '16px 20px', borderStyle: 'dashed', borderColor: 'var(--accent)' }}>
               <h3 style={{ fontSize: '12px', color: 'var(--accent)', marginBottom: '4px' }}>💻 데스크탑 시뮬레이터</h3>
               <p style={{ fontSize: '11px', marginBottom: '12px' }}>
@@ -825,25 +842,10 @@ function App() {
               </button>
             </div>
 
-            {/* Box 3: AI Sleep Coach Chatbot */}
-            <div 
-              className="glass-card clickable-card" 
-              style={{ cursor: 'pointer', border: '1px solid rgba(255, 159, 67, 0.15)', margin: '0 0 16px 0', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}
-              onClick={() => { triggerHaptic(50); setScreen('coach-bot'); }}
-            >
-              <div style={{ fontSize: '28px' }}>💬</div>
-              <div style={{ textAlign: 'left' }}>
-                <h3 style={{ fontSize: '14px', margin: 0, color: 'var(--accent)' }}>AI 수면 코치와 생각 비우기</h3>
-                <p style={{ fontSize: '11px', margin: '2px 0 0 0', color: 'var(--text-muted)' }}>
-                  잠을 방해하는 잡념과 스트레스를 코치와 나누며 머릿속을 비우세요.
-                </p>
-              </div>
-            </div>
-
             <button 
               className="btn-primary"
               disabled={!isChargerConnected}
-              style={{ opacity: isChargerConnected ? 1 : 0.4, cursor: isChargerConnected ? 'pointer' : 'not-allowed' }}
+              style={{ opacity: isChargerConnected ? 1 : 0.4, cursor: isChargerConnected ? 'pointer' : 'not-allowed', marginTop: '8px' }}
               onClick={handleNextFromStep1}
             >
               연결 완료
