@@ -39,6 +39,7 @@ function App() {
   // Sleep Reservation Timer
   const [isReserveActive, setIsReserveActive] = useState(false);
   const [reserveSecondsLeft, setReserveSecondsLeft] = useState(0);
+  const [reserveTotalSeconds, setReserveTotalSeconds] = useState(0);
   const [showAutomationGuide, setShowAutomationGuide] = useState(false);
   const [showReservationStartModal, setShowReservationStartModal] = useState(false);
   
@@ -204,7 +205,9 @@ function App() {
 
   const handleStartReservation = (minutes) => {
     triggerHaptic(80);
-    setReserveSecondsLeft(Math.round(minutes * 60));
+    const totalSecs = Math.round(minutes * 60);
+    setReserveSecondsLeft(totalSecs);
+    setReserveTotalSeconds(totalSecs);
     setIsReserveActive(true);
     
     // Only show guide modal for real scheduled timers (not instant 6s tests)
@@ -221,6 +224,7 @@ function App() {
     triggerHaptic(50);
     setIsReserveActive(false);
     setReserveSecondsLeft(0);
+    setReserveTotalSeconds(0);
     setShowReservationStartModal(false);
   };
 
@@ -751,19 +755,18 @@ function App() {
               let strokeDashoffset = 0;
               if (isReserveActive) {
                 // Countdown starts as a complete circle (100%) and ticks down to 0%
-                const totalSecs = timerDuration * 60;
-                const pct = totalSecs > 0 ? (reserveSecondsLeft / totalSecs) : 0;
-                const angle = pct * 2 * Math.PI - Math.PI / 2;
+                const pct = reserveTotalSeconds > 0 ? (reserveSecondsLeft / reserveTotalSeconds) : 0;
+                const angle = pct * 2 * Math.PI;
                 cx = 90 + 75 * Math.cos(angle);
                 cy = 90 + 75 * Math.sin(angle);
                 strokeDashoffset = 471.24 * (1 - pct);
               } else {
-                // Idle state selects time relative to a 12-hour (720 min) scale
-                const pct = (timerDuration - 1) / 719;
-                const angle = pct * 2 * Math.PI - Math.PI / 2;
+                // Idle state is always a complete circle (100% full) starting at 12 o'clock
+                const pct = 1;
+                const angle = pct * 2 * Math.PI;
                 cx = 90 + 75 * Math.cos(angle);
                 cy = 90 + 75 * Math.sin(angle);
-                strokeDashoffset = 471.24 * (1 - pct);
+                strokeDashoffset = 0;
               }
 
               return (
@@ -800,7 +803,7 @@ function App() {
                         }}
                       >
                         {Array.from({ length: 13 }, (_, i) => (
-                          <option key={i} value={i}>{i}시간</option>
+                           <option key={i} value={i}>{i}시간</option>
                         ))}
                       </select>
                     </div>
@@ -827,9 +830,7 @@ function App() {
                     <div 
                       ref={dialRef}
                       className="dial-wrapper"
-                      onMouseDown={handleDialMouseDown}
-                      onTouchStart={handleDialTouchStart}
-                      style={{ pointerEvents: isReserveActive ? 'none' : 'auto' }}
+                      style={{ pointerEvents: 'none' }}
                     >
                       <svg className="dial-svg" viewBox="0 0 180 180">
                         <defs>
@@ -861,7 +862,7 @@ function App() {
                           style={{ 
                             fontSize: '18px', 
                             userSelect: 'none', 
-                            cursor: isReserveActive ? 'default' : 'grab',
+                            cursor: 'default',
                             filter: 'drop-shadow(0 0 3px rgba(255, 159, 67, 0.4))'
                           }}
                         >
