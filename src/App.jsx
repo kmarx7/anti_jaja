@@ -375,7 +375,7 @@ function App() {
   // Action: Finish breathing
   const handleNextFromStep2 = () => {
     triggerHaptic(100);
-    setScreen('coach-bot');
+    setScreen('step3');
   };
 
   const handleSendChatMessage = () => {
@@ -439,7 +439,7 @@ function App() {
 
   const handleFinishChat = () => {
     triggerHaptic(100);
-    setScreen('step3');
+    setScreen('step1');
   };
 
   // Action: Add / Delete / Toggle / Save planned todos
@@ -783,8 +783,8 @@ function App() {
               </p>
             </div>
 
-            <div className="glass-card" style={{ margin: '40px 0', padding: '24px', textAlign: 'left' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', marginBottom: '16px' }}>
+            <div className="glass-card" style={{ margin: '12px 0', padding: '16px 20px', textAlign: 'left' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', marginBottom: '8px' }}>
                 <input 
                   type="checkbox" 
                   checked={isChargerConnected}
@@ -800,7 +800,7 @@ function App() {
             </div>
 
             {/* Laptop/Desktop simulation card for Testing */}
-            <div className="glass-card" style={{ borderStyle: 'dashed', borderColor: 'var(--accent)' }}>
+            <div className="glass-card" style={{ margin: '0 0 12px 0', padding: '16px 20px', borderStyle: 'dashed', borderColor: 'var(--accent)' }}>
               <h3 style={{ fontSize: '12px', color: 'var(--accent)', marginBottom: '4px' }}>💻 데스크탑 시뮬레이터</h3>
               <p style={{ fontSize: '11px', marginBottom: '12px' }}>
                 기기 센서를 모방하는 테스트용 가상 토글입니다.
@@ -815,6 +815,21 @@ function App() {
               >
                 폰 엎어놓기 시뮬레이션 실행 (Flat Down)
               </button>
+            </div>
+
+            {/* Box 3: AI Sleep Coach Chatbot */}
+            <div 
+              className="glass-card clickable-card" 
+              style={{ cursor: 'pointer', border: '1px solid rgba(255, 159, 67, 0.15)', margin: '0 0 16px 0', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '12px' }}
+              onClick={() => { triggerHaptic(50); setScreen('coach-bot'); }}
+            >
+              <div style={{ fontSize: '28px' }}>💬</div>
+              <div style={{ textAlign: 'left' }}>
+                <h3 style={{ fontSize: '14px', margin: 0, color: 'var(--accent)' }}>AI 수면 코치와 생각 비우기</h3>
+                <p style={{ fontSize: '11px', margin: '2px 0 0 0', color: 'var(--text-muted)' }}>
+                  잠을 방해하는 잡념과 스트레스를 코치와 나누며 머릿속을 비우세요.
+                </p>
+              </div>
             </div>
 
             <button 
@@ -973,7 +988,7 @@ function App() {
         {/* STEP 2.5: AI SLEEP COACH CHATBOT */}
         {screen === 'coach-bot' && (
           <div className="fade-enter-active" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
-            <button className="exit-ritual" onClick={() => setScreen('dashboard')}>✕</button>
+            <button className="exit-ritual" onClick={() => setScreen('step1')}>✕</button>
 
             <div>
               <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
@@ -1030,7 +1045,7 @@ function App() {
               onClick={handleFinishChat}
               disabled={isCoachTyping}
             >
-              대화 마치고 내일 계획하기
+              대화 완료 (의식 1단계로 돌아가기) 🕯️
             </button>
           </div>
         )}
