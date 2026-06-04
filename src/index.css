@@ -649,3 +649,143 @@ p {
   50% { transform: scale(1.1); }
   100% { transform: scale(1); }
 }
+
+/* To-Do List Step 3 Styles */
+.todo-input-container {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.todo-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: var(--text-main);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.todo-input:focus {
+  border-color: var(--accent);
+  background: rgba(255, 159, 67, 0.02);
+}
+
+.todo-add-btn {
+  background: rgba(255, 159, 67, 0.15);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.todo-add-btn:hover {
+  background: rgba(255, 159, 67, 0.25);
+  border-color: var(--accent);
+}
+
+.todo-list-scroll {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 159, 67, 0.3) transparent;
+}
+
+.todo-list-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.todo-list-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 159, 67, 0.3);
+  border-radius: 2px;
+}
+
+.todo-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.todo-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 159, 67, 0.1);
+}
+
+.todo-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.todo-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.todo-text {
+  font-size: 14px;
+  color: var(--text-main);
+  transition: all 0.2s;
+}
+
+.todo-text.completed {
+  text-decoration: line-through;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+.todo-del-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  transition: all 0.2s;
+}
+
+.todo-del-btn:hover {
+  color: var(--accent-dim);
+}
+
+.todo-recommendations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.recommendation-chip {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.recommendation-chip:hover {
+  background: rgba(255, 159, 67, 0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+

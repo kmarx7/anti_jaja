@@ -30,9 +30,10 @@ function App() {
   const [breathCycle, setBreathCycle] = useState(1);
   const breathIntervalRef = useRef(null);
 
-  // Ritual Step 3: Brain Dump
-  const [worryText, setWorryText] = useState('');
-  const [isBurning, setIsBurning] = useState(false);
+  // Ritual Step 3: Tomorrow's To-Do List
+  const [todos, setTodos] = useState([]);
+  const [newTodo, setNewTodo] = useState('');
+  const [isSavingTodos, setIsSavingTodos] = useState(false);
 
   // Blackout (Sleep Mode) Screen
   const [secondsRemaining, setSecondsRemaining] = useState(0);
@@ -112,8 +113,24 @@ function App() {
   useEffect(() => {
     const storedStreak = localStorage.getItem('sleep_rit_streak');
     const storedMinutes = localStorage.getItem('sleep_rit_minutes');
+    const storedTodos = localStorage.getItem('sleep_rit_todos');
     if (storedStreak) setStreak(parseInt(storedStreak, 10));
     if (storedMinutes) setTotalMinutes(parseInt(storedMinutes, 10));
+    if (storedTodos) {
+      try {
+        setTodos(JSON.parse(storedTodos));
+      } catch (e) {
+        setTodos([
+          { id: 1, text: '이불 정리하기 🛌', completed: false },
+          { id: 2, text: '따뜻한 물 한 잔 마시기 💧', completed: false }
+        ]);
+      }
+    } else {
+      setTodos([
+        { id: 1, text: '이불 정리하기 🛌', completed: false },
+        { id: 2, text: '따뜻한 물 한 잔 마시기 💧', completed: false }
+      ]);
+    }
   }, []);
 
   // Handle device orientation API (if mobile supports it)
@@ -262,18 +279,36 @@ function App() {
     setScreen('step3');
   };
 
-  // Action: Dissolve worries and start sleep blackout
-  const handleBurnWorries = () => {
-    if (!worryText.trim()) return;
-    setIsBurning(true);
-    triggerHaptic([100, 50, 100]); // continuous crackling vibration
+  // Action: Add / Delete / Toggle / Save planned todos
+  const handleAddTodo = (text) => {
+    if (!text.trim()) return;
+    const item = { id: Date.now(), text: text.trim(), completed: false };
+    setTodos([...todos, item]);
+    setNewTodo('');
+    triggerHaptic(50);
+  };
+
+  const handleDeleteTodo = (id) => {
+    setTodos(todos.filter(t => t.id !== id));
+    triggerHaptic(50);
+  };
+
+  const handleToggleTodo = (id) => {
+    const updated = todos.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+    setTodos(updated);
+    localStorage.setItem('sleep_rit_todos', JSON.stringify(updated));
+    triggerHaptic(50);
+  };
+
+  const handleSaveTodosAndSleep = () => {
+    setIsSavingTodos(true);
+    triggerHaptic([100, 50, 100]);
+    localStorage.setItem('sleep_rit_todos', JSON.stringify(todos));
     
-    // Switch to blackout after dissolution animation completes (2.5s)
     setTimeout(() => {
-      setIsBurning(false);
-      setWorryText('');
+      setIsSavingTodos(false);
       setScreen('blackout');
-    }, 2500);
+    }, 1500);
   };
 
   // Action: Blackout completes naturally
@@ -623,7 +658,7 @@ function App() {
           </div>
         )}
 
-        {/* STEP 3: BRAIN DUMP */}
+        {/* STEP 3: TOMORROW'S TO-DO LIST */}
         {screen === 'step3' && (
           <div className="fade-enter-active" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
             <button className="exit-ritual" onClick={() => setScreen('dashboard')}>✕</button>
@@ -632,27 +667,83 @@ function App() {
               <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
                 의식 3단계
               </div>
-              <h2 style={{ fontSize: '24px' }}>걱정 휴지통 (브레인 덤프)</h2>
-              <p style={{ marginTop: '8px' }}>오늘 하루 머릿속에 가득했던 잡념, 할 일, 혹은 스트레스 원인을 텍스트로 자유롭게 털어내세요.</p>
+              <h2 style={{ fontSize: '22px' }}>내일 아침 계획 (할 일 정리)</h2>
+              <p style={{ marginTop: '6px', fontSize: '13px' }}>
+                잠들기 전 내일 할 일을 미리 적어두면 뇌가 안심하여 숙면할 수 있습니다.
+              </p>
             </div>
 
-            <div style={{ margin: '24px 0' }}>
-              <textarea
-                className={`worry-textarea ${isBurning ? 'burning' : ''}`}
-                value={worryText}
-                onChange={(e) => setWorryText(e.target.value)}
-                placeholder="여기에 적어 내려가세요. 이 걱정은 저장이 아닌 '영구 삭제' 됩니다."
-                disabled={isBurning}
-              />
+            <div style={{ flexGrow: 1, margin: '20px 0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {/* Input Container */}
+              <div className="todo-input-container">
+                <input 
+                  type="text"
+                  className="todo-input"
+                  placeholder="내일 할 일을 적어보세요..."
+                  value={newTodo}
+                  onChange={(e) => setNewTodo(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddTodo(newTodo); }}
+                  disabled={isSavingTodos}
+                />
+                <button 
+                  type="button"
+                  className="todo-add-btn"
+                  onClick={() => handleAddTodo(newTodo)}
+                  disabled={isSavingTodos}
+                >
+                  추가
+                </button>
+              </div>
+
+              {/* Recommendations */}
+              <div style={{ textAlign: 'left', marginBottom: '12px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>추천 루틴:</span>
+                <div className="todo-recommendations" style={{ marginTop: '6px' }}>
+                  {['따뜻한 물 한잔 💧', '이불 정리 🛌', '5분 스트레칭 🧘', '가벼운 아침 식사 🍎', '독서 10분 📖'].map((rec) => (
+                    <span 
+                      key={rec}
+                      className="recommendation-chip"
+                      onClick={() => handleAddTodo(rec)}
+                    >
+                      +{rec.split(' ')[0]}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Scrollable Todo List */}
+              <div className="todo-list-scroll">
+                {todos.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic', margin: '20px 0' }}>
+                    내일 계획이 아직 비어있습니다.
+                  </p>
+                ) : (
+                  todos.map((todo) => (
+                    <div key={todo.id} className="todo-item">
+                      <div className="todo-item-left">
+                        <span className="todo-text">{todo.text}</span>
+                      </div>
+                      <button 
+                        type="button"
+                        className="todo-del-btn"
+                        onClick={() => handleDeleteTodo(todo.id)}
+                        disabled={isSavingTodos}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
             <button 
               className="btn-primary"
-              onClick={handleBurnWorries}
-              disabled={!worryText.trim() || isBurning}
-              style={{ opacity: worryText.trim() && !isBurning ? 1 : 0.4 }}
+              onClick={handleSaveTodosAndSleep}
+              disabled={isSavingTodos}
+              style={{ marginTop: '10px' }}
             >
-              {isBurning ? '걱정 태워버리는 중...' : '걱정 지우고 잠들기 💫'}
+              {isSavingTodos ? '계획 저장 중...' : '일과 계획 완료 및 취침 🌙'}
             </button>
           </div>
         )}
@@ -722,33 +813,86 @@ function App() {
           </div>
         )}
 
-        {/* MORNING / RITUAL COMPLETE SCREEN */}
+        {/* MORNING / RITUAL COMPLETE SCREEN (Display planned routine checkmarks) */}
         {screen === 'morning' && (
           <div className="fade-enter-active" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', textAlign: 'center' }}>
             
-            <div style={{ marginTop: '40px' }}>
-              <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>🌙 ➔ 🌅</span>
-              <h2 style={{ fontSize: '26px', color: 'var(--accent)' }}>수면 의식 완료</h2>
-              <p style={{ marginTop: '16px', fontSize: '15px' }}>
-                스마트폰의 스크롤 유혹을 참아내고 수면 상태 진입에 성공하셨습니다.
+            <div style={{ marginTop: '30px' }}>
+              <span style={{ fontSize: '40px', display: 'block', marginBottom: '10px' }}>🌅</span>
+              <h2 style={{ fontSize: '24px', color: 'var(--accent)' }}>좋은 아침입니다!</h2>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                어젯밤 잠들기 전 계획한 아침 루틴을 확인하세요.
               </p>
             </div>
 
-            <div className="glass-card" style={{ margin: '30px 0', padding: '24px' }}>
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>수고한 나를 위한 기록</div>
-              <div style={{ fontSize: '32px', fontWeight: 'bold', margin: '12px 0', color: 'var(--text-main)' }}>
-                🔥 {streak}일 연속
+            {/* Planned routine todos */}
+            <div className="glass-card" style={{ flexGrow: 1, margin: '16px 0', padding: '16px', display: 'flex', flexDirection: 'column', textAlign: 'left', overflow: 'hidden' }}>
+              <h3 style={{ fontSize: '14px', marginBottom: '10px', borderBottom: '1px solid rgba(255,159,67,0.1)', paddingBottom: '6px' }}>오늘 아침의 약속 리스트</h3>
+              <div className="todo-list-scroll" style={{ flexGrow: 1, maxHeight: '180px' }}>
+                {todos.length === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: '12px' }}>
+                    계획된 루틴이 없습니다.
+                  </p>
+                ) : (
+                  todos.map((todo) => (
+                    <label key={todo.id} className="todo-item" style={{ cursor: 'pointer' }}>
+                      <div className="todo-item-left">
+                        <input 
+                          type="checkbox"
+                          className="todo-checkbox"
+                          checked={todo.completed}
+                          onChange={() => handleToggleTodo(todo.id)}
+                        />
+                        <span className={`todo-text ${todo.completed ? 'completed' : ''}`}>
+                          {todo.text}
+                        </span>
+                      </div>
+                    </label>
+                  ))
+                )}
               </div>
-              <p style={{ fontSize: '13px' }}>
-                당신은 오늘 밤 총 <strong>{timerDuration}분</strong>의 도파민 스마트폰 오프시간을 사수했습니다.
-              </p>
+            </div>
+
+            {/* Achievement Card */}
+            <div className="glass-card" style={{ padding: '12px 20px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>연속 취침 성공 스트릭</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--text-main)', marginTop: '2px' }}>
+                  🔥 {streak}일 연속 달성
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>스마트폰 오프 타임</div>
+                <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--accent)', marginTop: '2px' }}>
+                  +{timerDuration}분
+                </div>
+              </div>
             </div>
 
             <button 
               className="btn-primary"
-              onClick={() => setScreen('dashboard')}
+              onClick={() => {
+                // Carry over incomplete todos or reset
+                const incomplete = todos.filter(t => !t.completed);
+                if (incomplete.length === 0) {
+                  setTodos([
+                    { id: 1, text: '이불 정리하기 🛌', completed: false },
+                    { id: 2, text: '따뜻한 물 한 잔 마시기 💧', completed: false }
+                  ]);
+                  localStorage.setItem('sleep_rit_todos', JSON.stringify([
+                    { id: 1, text: '이불 정리하기 🛌', completed: false },
+                    { id: 2, text: '따뜻한 물 한 잔 마시기 💧', completed: false }
+                  ]));
+                } else {
+                  // Reset completed status of incomplete ones to carry over
+                  const resetIncomplete = incomplete.map(t => ({ ...t, completed: false }));
+                  setTodos(resetIncomplete);
+                  localStorage.setItem('sleep_rit_todos', JSON.stringify(resetIncomplete));
+                }
+                setScreen('dashboard');
+              }}
             >
-              대시보드로 돌아가기
+              의식 종료 및 대시보드
             </button>
           </div>
         )}
