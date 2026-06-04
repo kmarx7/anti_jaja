@@ -375,7 +375,7 @@ function App() {
   // Action: Finish breathing
   const handleNextFromStep2 = () => {
     triggerHaptic(100);
-    setScreen('step3');
+    setScreen('blackout');
   };
 
   const handleSendChatMessage = () => {
@@ -470,7 +470,7 @@ function App() {
     
     setTimeout(() => {
       setIsSavingTodos(false);
-      setScreen('blackout');
+      setScreen('step1');
     }, 1500);
   };
 
@@ -761,7 +761,7 @@ function App() {
               type="button"
               className="btn-primary" 
               style={{ marginTop: '8px' }}
-              onClick={() => { triggerHaptic(100); setScreen('step1'); }}
+              onClick={() => { triggerHaptic(100); setScreen('step3'); }}
             >
               수면 의식 시작하기 🌙
             </button>
@@ -775,7 +775,7 @@ function App() {
             
             <div style={{ marginTop: '20px' }}>
               <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
-                의식 1단계
+                의식 2단계
               </div>
               <h2 style={{ fontSize: '24px', lineHeight: '1.3' }}>기기 격리 및 전원 연결</h2>
               <p style={{ marginTop: '16px', fontSize: '15px' }}>
@@ -850,7 +850,7 @@ function App() {
 
             <div>
               <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
-                의식 1.5단계
+                의식 3단계
               </div>
               <h2 style={{ fontSize: '24px' }}>취침 전 이완 스트레칭</h2>
               <p style={{ marginTop: '8px', fontSize: '13px' }}>
@@ -940,7 +940,7 @@ function App() {
 
             <div>
               <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
-                의식 2단계
+                의식 4단계
               </div>
               <h2 style={{ fontSize: '24px' }}>4-7-8 이완 호흡</h2>
               <p style={{ marginTop: '8px' }}>심박수를 늦추고 자극된 부교감신경을 자극하여 뇌를 진정시키는 호흡법입니다.</p>
@@ -980,7 +980,7 @@ function App() {
               onClick={handleNextFromStep2}
               style={{ marginTop: '20px' }}
             >
-              {breathPhase === 'done' ? '호흡 완료 (다음 단계)' : '건너뛰고 다음 단계'}
+              {breathPhase === 'done' ? '호흡 완료 및 수면 모드 진입 🌙' : '건너뛰고 수면 모드 진입 🌙'}
             </button>
           </div>
         )}
@@ -1057,7 +1057,7 @@ function App() {
 
             <div>
               <div style={{ fontSize: '12px', color: 'var(--accent)', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>
-                의식 3단계
+                의식 1단계
               </div>
               <h2 style={{ fontSize: '22px' }}>내일 아침 계획 (할 일 정리)</h2>
               <p style={{ marginTop: '6px', fontSize: '13px' }}>
@@ -1135,7 +1135,7 @@ function App() {
               disabled={isSavingTodos}
               style={{ marginTop: '10px' }}
             >
-              {isSavingTodos ? '계획 저장 중...' : '일과 계획 완료 및 취침 🌙'}
+              {isSavingTodos ? '계획 저장 중...' : '계획 완료 및 기기 격리하기 📱'}
             </button>
           </div>
         )}
