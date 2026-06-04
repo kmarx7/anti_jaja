@@ -31,6 +31,10 @@ function App() {
   const [sleepLogs, setSleepLogs] = useState([]);
   const [selectedLogDetail, setSelectedLogDetail] = useState(null);
   
+  // Custom Ritual Durations
+  const [stretchDuration, setStretchDuration] = useState(15); // seconds per stretch: 10, 15, 20, 30
+  const [breathCyclesMax, setBreathCyclesMax] = useState(3); // breathing cycles count: 3, 4, 6, 8
+  
   // Ritual Step 1: Device Charge
   const [isChargerConnected, setIsChargerConnected] = useState(false);
   const [orientationSimulation, setOrientationSimulation] = useState(false); // Simulate face down for testing
@@ -139,9 +143,13 @@ function App() {
     const storedTodos = localStorage.getItem('sleep_rit_todos');
     const storedLogs = localStorage.getItem('sleep_rit_logs');
     const storedMix = localStorage.getItem('sleep_rit_mix');
+    const storedStretchDur = localStorage.getItem('sleep_rit_stretch_dur');
+    const storedBreathCycles = localStorage.getItem('sleep_rit_breath_cycles');
     
     if (storedStreak) setStreak(parseInt(storedStreak, 10));
     if (storedMinutes) setTotalMinutes(parseInt(storedMinutes, 10));
+    if (storedStretchDur) setStretchDuration(parseInt(storedStretchDur, 10));
+    if (storedBreathCycles) setBreathCyclesMax(parseInt(storedBreathCycles, 10));
     
     if (storedTodos) {
       try {
@@ -251,7 +259,7 @@ function App() {
       setBreathTimer(8);
       triggerHaptic(200); // feedback
     } else if (breathPhase === 'exhale') {
-      if (breathCycle >= 3) {
+      if (breathCycle >= breathCyclesMax) {
         setBreathPhase('done');
         setBreathTimer(0);
       } else {
@@ -335,7 +343,7 @@ function App() {
     triggerHaptic(150);
     setScreen('stretching');
     setStretchIndex(0);
-    setStretchSecondsLeft(15);
+    setStretchSecondsLeft(stretchDuration);
     setIsStretchActive(true);
   };
 
@@ -355,13 +363,13 @@ function App() {
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [screen, isStretchActive, stretchSecondsLeft, stretchIndex]);
+  }, [screen, isStretchActive, stretchSecondsLeft, stretchIndex, stretchDuration]);
 
   const handleStretchTimerComplete = () => {
     triggerHaptic(120);
     if (stretchIndex < 2) {
       setStretchIndex(prev => prev + 1);
-      setStretchSecondsLeft(15);
+      setStretchSecondsLeft(stretchDuration);
     } else {
       setScreen('step2');
     }
@@ -909,7 +917,7 @@ function App() {
                 onClick={() => {
                   if (stretchIndex < 2) {
                     setStretchIndex(stretchIndex + 1);
-                    setStretchSecondsLeft(15);
+                    setStretchSecondsLeft(stretchDuration);
                     setIsStretchActive(true);
                     triggerHaptic(50);
                   } else {
@@ -968,7 +976,7 @@ function App() {
                       {breathPhase === 'done' && '호흡 완료'}
                     </h3>
                     <p style={{ fontSize: '12px', marginTop: '4px' }}>
-                      {breathPhase !== 'done' && `총 3회 중 ${breathCycle}번째 사이클`}
+                      {breathPhase !== 'done' && `총 ${breathCyclesMax}회 중 ${breathCycle}번째 사이클`}
                     </p>
                   </div>
                 </div>
@@ -1324,7 +1332,7 @@ function App() {
                   className={`tab-btn ${settingsTab === 'sounds' ? 'active' : ''}`}
                   onClick={() => setSettingsTab('sounds')}
                 >
-                  사운드 믹스 🎛️
+                  의식 설정 🎛️
                 </button>
                 <button 
                   type="button" 
@@ -1368,6 +1376,68 @@ function App() {
                             />
                           </div>
                         ))}
+                      </div>
+                    </div>
+
+                    <div className="glass-card modal-card" style={{ padding: '0', background: 'transparent', border: 'none', boxShadow: 'none', marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '16px' }}>
+                      <span style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block', fontWeight: '600', marginBottom: '12px', textAlign: 'left' }}>
+                        의식 단계 상세 설정 ⚙️
+                      </span>
+                      
+                      {/* Stretching Pose Duration */}
+                      <div style={{ background: 'rgba(255,255,255,0.01)', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)', marginBottom: '12px', textAlign: 'left' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 'bold' }}>3단계: 스트레칭 시간 🧘</span>
+                          <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>동작당 {stretchDuration}초</span>
+                        </div>
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                          각 스트레칭 자세를 유지할 시간을 설정합니다.
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {[10, 15, 20, 30].map(sec => (
+                            <button
+                              key={sec}
+                              type="button"
+                              className={`preset-btn ${stretchDuration === sec ? 'active' : ''}`}
+                              style={{ padding: '6px 0', fontSize: '12px' }}
+                              onClick={() => {
+                                setStretchDuration(sec);
+                                localStorage.setItem('sleep_rit_stretch_dur', sec.toString());
+                                triggerHaptic(50);
+                              }}
+                            >
+                              {sec}초
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Breathing Cycles count */}
+                      <div style={{ background: 'rgba(255,255,255,0.01)', padding: '10px 14px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'left' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 'bold' }}>4단계: 이완 호흡 사이클 🌬️</span>
+                          <span style={{ color: 'var(--accent)', fontWeight: 'bold' }}>{breathCyclesMax}회 반복</span>
+                        </div>
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                          4-7-8 이완 호흡을 반복할 횟수를 설정합니다.
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {[3, 4, 6, 8].map(cycles => (
+                            <button
+                              key={cycles}
+                              type="button"
+                              className={`preset-btn ${breathCyclesMax === cycles ? 'active' : ''}`}
+                              style={{ padding: '6px 0', fontSize: '12px' }}
+                              onClick={() => {
+                                setBreathCyclesMax(cycles);
+                                localStorage.setItem('sleep_rit_breath_cycles', cycles.toString());
+                                triggerHaptic(50);
+                              }}
+                            >
+                              {cycles}회
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
