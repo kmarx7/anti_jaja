@@ -863,7 +863,7 @@ function App() {
                             filter: 'drop-shadow(0 0 3px rgba(255, 159, 67, 0.4))'
                           }}
                         >
-                          {isReserveActive ? '🐈' : '🐱'}
+                          🐱
                         </text>
                       </svg>
                       
