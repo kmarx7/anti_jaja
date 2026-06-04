@@ -745,24 +745,13 @@ function App() {
 
             {/* Sleep Reservation Timer Dial Card */}
             {(() => {
-              // Calculate dial coordinates and offset based on active countdown
-              let cx = 90;
-              let cy = 15;
-              let strokeDashoffset = 0;
-              if (isReserveActive) {
-                const totalSecs = timerDuration * 60;
-                const pct = totalSecs > 0 ? (reserveSecondsLeft / totalSecs) : 0;
-                const angle = pct * 2 * Math.PI - Math.PI / 2;
-                cx = 90 + 75 * Math.cos(angle);
-                cy = 90 + 75 * Math.sin(angle);
-                strokeDashoffset = 471.24 * (1 - pct);
-              } else {
-                const pct = (timerDuration - 1) / 719;
-                const angle = pct * 2 * Math.PI - Math.PI / 2;
-                cx = 90 + 75 * Math.cos(angle);
-                cy = 90 + 75 * Math.sin(angle);
-                strokeDashoffset = 471.24 * (1 - pct);
-              }
+              // Calculate dial coordinates and offset based on active countdown (unified to prevent jumps)
+              const activeMinutes = isReserveActive ? (reserveSecondsLeft / 60) : timerDuration;
+              const pct = activeMinutes > 0 ? ((activeMinutes - 1) / 719) : -1 / 719;
+              const angle = pct * 2 * Math.PI - Math.PI / 2;
+              const cx = 90 + 75 * Math.cos(angle);
+              const cy = 90 + 75 * Math.sin(angle);
+              const strokeDashoffset = 471.24 * (1 - pct);
 
               return (
                 <div className="glass-card timer-card">
